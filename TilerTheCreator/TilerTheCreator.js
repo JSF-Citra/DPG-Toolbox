@@ -1,6 +1,6 @@
-// Tiler the Creator v1.3
+// Tiler the Creator v1.4
 // Written by Samoe (John Sam Fuchs)
-// 7/13/21
+// 7/29/21
 // 
 // 1. User finds a tile print file (4" x 4" PDF)
 // 2. User defines parameters like order, sku, and quantity
@@ -8,18 +8,25 @@
 // 4. Once finished queueing, user submits queue
 // 5. Script lays out sheets needed based on 8 tiles per sheet
 // 6. Script takes remainders of all sheets and lays out optimized sheets
+//
+// UPDATES IN V1.4
+// - User can now delete objects from the runlist
+// - User can now select previous order numbers from dropdown menu to improve efficiency
+// - Default quantity set to 25
+// - Visual tweaks and upgrades
 
 // INIT DIRECTORY AND ASSETS
 var scriptPath = $.fileName
 var folderPath = scriptPath.slice(0,-18)
 var templateFilePath = folderPath + '/assets/TILES_TEMPLATE.pdf';
 var headerImagePath = folderPath + '/assets/tiler_header.jpg';
+var footerImagePath = folderPath + '/assets/tiler_footer.jpg';
 var templateFile = File(templateFilePath);
 
 // INIT VARIABLES
 var destination = ''
 var filePath = ''
-var quantity = 8
+var quantity = 25
 var orderNumber = 00000
 var skuNumber = 00000
 var itemInfo = {
@@ -34,6 +41,8 @@ var sheetsNeeded = 1
 var remainderArray = [];
 var remainderSheet = false;
 var remainder = 0
+var ordersTyped = [];
+var orderList
 
 // Tile positions are hard-coded. Change in the future to dynamically read positions of objects.
 var itemPositions = [
@@ -53,6 +62,7 @@ function windowDisplay() {
 
     // INITIALIZE WINDOW
     var w = new Window("dialog", "Tiler, The Creator");
+    w.margins = [0, 0, 0, 0];
   
     // BACKGROUND COLOR
     w.graphics.backgroundColor = w.graphics.newBrush (w.graphics.BrushType.SOLID_COLOR,
@@ -60,7 +70,6 @@ function windowDisplay() {
     
     // HEADER IMAGE
     var headerImage = w.add("image", undefined, File(headerImagePath));
-
 
     // INSTRUCTIONS
     var myInfoGroupInfo = w.add("group");
@@ -75,20 +84,26 @@ function windowDisplay() {
     var instr5 = myInfoGroupInfo.add("statictext", undefined, "5. Click Submit and WAIT until all the files have processed!")
       instr5.alignment = "left"
 
-    myInfoGroupInfo.alignment = "left";
+    myInfoGroupInfo.alignment = "center";
     myInfoGroupInfo.orientation = "column";
 
-    // SET BACKGROUND COLOR
+    // INITIALIZE PANEL
     var inputPanel = w.add('panel');
-    inputPanel.graphics.backgroundColor = w.graphics.newBrush (w.graphics.BrushType.SOLID_COLOR,[.4,.4,.4]);
+    inputPanel.graphics.backgroundColor = w.graphics.newBrush (w.graphics.BrushType.SOLID_COLOR,[.35, .35, .35]);
+
 
     // ORDER NUMBER INPUT
     var myInputGroupInfo = inputPanel.add("group");
       myInputGroupInfo.add("statictext", undefined, "Order: ")
-      var OrderNumberText = myInputGroupInfo.add("edittext", undefined, "")
-          OrderNumberText.characters = 8;
-          OrderNumberText.active = true;
-          orderNumber = OrderNumberText.text
+      var group = myInputGroupInfo.add ("group {alignChildren: 'left', orientation: ’stack'}");
+      orderList = group.add ("dropdownlist", undefined, ordersTyped);
+      var orderNumberText = group.add ("edittext");
+      orderList.preferredSize.width = 100; orderList.preferredSize.height = 24;
+      orderNumberText.preferredSize.width = 80; orderNumberText.preferredSize.height = 24;
+      orderList.onChange = function () {
+         orderNumberText.text = orderList.selection.text;
+         orderNumberText.active = true;
+      }
 
     // SKU NUMBER INPUT
     myInputGroupInfo.add("statictext", undefined, "SKU: ")
@@ -98,15 +113,15 @@ function windowDisplay() {
 
     // QUANTITY INPUT
     myInputGroupInfo.add("statictext", undefined, "Quantity: ")
-      var QuantityText = myInputGroupInfo.add("edittext", undefined, "8")
+      var QuantityText = myInputGroupInfo.add("edittext", undefined, "25")
           QuantityText.characters = 4;                  
           quantity = QuantityText.text
       
     // FILE BROWSER INPUT
-    var myInputGroupSource = w.add("group");
-      myInputGroupSource.add("statictext", undefined, "Source: ")
+    var myInputGroupSource = inputPanel.add("group");
+      myInputGroupSource.add("statictext", undefined, "Print File: ")
       var sourcePath = myInputGroupSource.add("edittext", undefined, "Source path")
-          sourcePath.characters = 22;
+          sourcePath.characters = 25;
           source = sourcePath.text
       var sourceButton = myInputGroupSource.add("button", undefined, "Browse")
           sourceButton.onClick = function() {
@@ -135,27 +150,40 @@ function windowDisplay() {
     //   }
     // }
   
-    // ADD TO QUEUE
-    var addToListButton = w.add("button", undefined, "Add to Queue");
+    // ADD TO QUEUE BUTTON
+    var myButtonGroup1 = w.add("group");
+    var addToListButton = myButtonGroup1.add("button", undefined, "Add to Queue", {name: "ok"});
       addToListButton.onClick = function() {
         itemInfo = {
-          order: OrderNumberText.text, 
+          order: orderNumberText.text,
           sku: skuNumberText.text, 
           qty: QuantityText.text, 
           file: filePath
         }
       itemArray[itemArray.length] = itemInfo
-      myList.add("item", "Order: " + itemInfo.order + " // SKU: " + itemInfo.sku + " // QTY: " + itemInfo.qty)
+      orderList.add('item', itemInfo.order);
+      myList.add("item", "Order: " + itemInfo.order + " // SKU: " + itemInfo.sku + " // QTY: " + itemInfo.qty);
+      orderNumberText.text = ""
       }
 
+    //DELETE SELECTION BUTTON
+    var deleteButton = myButtonGroup1.add("button", undefined, "Delete");
+      deleteButton.onClick = function() {
+        // remember which line is selected
+        if (myList.selection === null) {}
+        else {
+        var sel = myList.selection[0].index;
+        for (var i = myList.selection.length-1; i > -1; i--)
+          myList.remove (myList.selection[i]);
+        }
+      }
 
     // LIST BOX
     var myListBox = w.add("group");
     myListBox.alignment = "center";
       var myList = myListBox.add ("listbox", undefined, [],{multiselect: true});
-      myList.minimumSize.width = 360;
-      myList.minimumSize.height = 140;
-
+      myList.minimumSize.width = 440;
+      myList.minimumSize.height = 180;
 
     // BOTTOM ROW
     var myButtonGroup = w.add("group");
@@ -173,6 +201,7 @@ function windowDisplay() {
           createMultipleFiles = true
         }
         destination = filePath.fsName.slice(0,-62);
+
         for (k = 0; k < itemArray.length; k++) {
           itemInfo = itemArray[k]
           sheetIndex = 1
@@ -185,20 +214,19 @@ function windowDisplay() {
         }
         return w.close();
     }
-
-    // COPYRIGHT TEXT
-    var copyrightText = w.add("statictext", undefined, "© Delta Print Group 2021")
-    copyrightText.alignment = "left";
   
-    // CANCEL BUTTON
-    var cancelButton = myButtonGroup.add("button", undefined, "Cancel");
-      cancelButton.alignment = "right";
+      // CANCEL BUTTON
+      var cancelButton = myButtonGroup.add("button", undefined, "Cancel");
+        cancelButton.alignment = "right";
+    
+    // FOOTER IMAGE
+    var footerImage = w.add("image", undefined, File(footerImagePath));
+    
     w.show();
-  
     return;
 }
 
-
+// CREATE EXTRA SHEETS AT THE END
 function createJigRemainder () {
   open (templateFile);
 
@@ -246,7 +274,7 @@ function createJigRemainder () {
   }
 }
 
-// MAIN FUNCTION - CREATE JIG
+// MAIN FUNCTION - CREATE SHEETS
 function CreateJig(itemInformant) {
     var filePath = itemInformant.file
     var remainingQty = itemInformant.qty
@@ -290,7 +318,7 @@ function CreateJig(itemInformant) {
             else {
               for (i = 0; i < remainder; i++) {
                 remainderArray[remainderArray.length] = itemInfo
-                }
+              }
             }
           }
           else {
@@ -301,7 +329,7 @@ function CreateJig(itemInformant) {
         if (remainder > 0){
           for (i = 0; i < remainder; i++) {
             remainderArray[remainderArray.length] = itemInfo
-            }
+          }
         }
       }
     }
@@ -311,6 +339,7 @@ function CreateJig(itemInformant) {
     }
 }
 
+// SET ITEM OBJECT DETAILS
 function itemParser (item) {
   itemInfo = {
     order: orderNumber,
@@ -320,6 +349,7 @@ function itemParser (item) {
   }
 }
 
+// SAVE SHEET AND CLOSE FILE
 function saveAndClose(doc, dest, order, sku, sheetIndex) {
   // Dynamically name the output file based on user-inputted info and sheet number
   if (createMultipleFiles == true) {
@@ -344,4 +374,5 @@ function saveAndClose(doc, dest, order, sku, sheetIndex) {
   doc.close();
 }
 
+// BEGIN EXECUTE
 windowDisplay();
