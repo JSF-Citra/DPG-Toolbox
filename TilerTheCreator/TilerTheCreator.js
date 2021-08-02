@@ -15,6 +15,9 @@
 // - Default quantity set to 25
 // - Visual tweaks and upgrades
 
+// SCRIPT VERSION
+var scriptVersion = "v1.5"
+
 // INIT DIRECTORY AND ASSETS
 var scriptPath = $.fileName
 var folderPath = scriptPath.slice(0,-18)
@@ -220,8 +223,11 @@ function windowDisplay() {
         cancelButton.alignment = "right";
     
     // FOOTER IMAGE
-    var footerImage = w.add("image", undefined, File(footerImagePath));
-    
+    var footerGroup = w.add("group {alignChildren: 'left', orientation: ’stack'}")
+    var footerImage = footerGroup.add("image", undefined, File(footerImagePath));
+    var versionText = footerGroup.add("statictext", undefined, scriptVersion);
+      versionText.alignment = "right";
+      versionText.text = scriptVersion + " '"
     w.show();
     return;
 }
