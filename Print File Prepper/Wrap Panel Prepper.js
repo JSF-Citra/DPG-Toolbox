@@ -1,10 +1,20 @@
-// Wrap Panel Print File Prepper v1
+// Wrap Panel Print File Prepper v1.1
 // Written by Samoe (John Sam Fuchs)
-// 7/30/21
+// 8/3/21
 // 
 // Takes selected elements, asks for a file name, creates print file
 // Print file to include label, .25" bleed on every side, and a cut line
 
+// WISHLIST
+// - Automatically detect how many panels
+// - Auto layout panels?
+// - Process all panels at once
+// --- Loop through all PerfCutContour paths
+// --- Remember original file location
+
+
+
+var scriptVersion = "v1.1"
 
 // Init variables
 var doc1 = app.activeDocument;
@@ -127,8 +137,7 @@ var w = new Window("dialog", "Wrap Panel File Prepper");
     var submitButton = myButtonGroup.add("button", undefined, "OK");
         submitButton.alignment = "center";
         submitButton.onClick = function() {
-            PreparePrintFile(printLabelText.text);    
-        return w.close;
+            PreparePrintFile(printLabelText.text);
         }
 
     // destination = filePath.fsName.slice(0,-62);
