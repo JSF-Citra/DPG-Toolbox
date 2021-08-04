@@ -227,7 +227,8 @@ function windowDisplay() {
     var footerImage = footerGroup.add("image", undefined, File(footerImagePath));
     var versionText = footerGroup.add("statictext", undefined, scriptVersion);
       versionText.alignment = "right";
-      versionText.text = scriptVersion + " '"
+      versionText.characters = 3;
+      versionText.text = scriptVersion;
     w.show();
     return;
 }
