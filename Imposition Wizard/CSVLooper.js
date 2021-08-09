@@ -1,4 +1,5 @@
 //@include "csvParser.js"
+//@include "../DPGT-Library.js"
 
 // TECHSTYLES PROCESSING BUDDY V1.0
 // Written by Dave Blois and John Sam Fuchs
@@ -10,14 +11,16 @@
 // 2a. Stickers will save to a folder within the input folder called "Sheets" unless you enable "Custom Output Location" and specify a location
 // 3. Script may take a bit to run, but all sheets will be named and ready to print upon completion.
 
-
-var scriptVersion = "v0.8"
+// SCRIPT DETAILS
+var scriptDeets = {
+  name : 'Imposition Wizard',
+  version : 'v0.8',
+}
 
 // INIT DIRECTORY AND ASSETS
 var scriptPath = $.fileName
-var folderPath = scriptPath.slice(0,-12)
+var folderPath = getFolderPath(scriptPath)
 var headerImagePath = folderPath + '/assets/imposition_header.jpg';
-var footerImagePath = folderPath + '/assets/imposition_footer.jpg';
 
 //INIT VARIABLES
 var infoTechCache = {}
@@ -30,15 +33,17 @@ var sheetIndex = 1
 var totalQuantity = 0
 /////////////////////
 
+// STYLE VARIABLES
+var bgColor = dpgPlum
+
 function windowDisplay() {
   //Setting initial window variables
   var spacingOptions = [0, 0.0625, 0.125, 0.25, 0.5]
-  var w = new Window("dialog", "Imposition Wizard");
+  var w = new Window("dialog", scriptDeets.name);
   w.margins = [0, 0, 0, 0];
   
   // BACKGROUND COLOR
-  w.graphics.backgroundColor = w.graphics.newBrush (w.graphics.BrushType.SOLID_COLOR,
-    [0.415, 0.239, 0.345]);
+  w.graphics.backgroundColor = w.graphics.newBrush (w.graphics.BrushType.SOLID_COLOR,bgColor);
   
   // HEADER IMAGE
   var headerImage = w.add("image", undefined, File(headerImagePath));
@@ -150,12 +155,7 @@ function windowDisplay() {
   myButtonGroup.add("button", undefined, "Cancel");
 
       // FOOTER IMAGE
-      var footerGroup = w.add("group {alignChildren: 'left', orientation: ’stack'}")
-      var footerImage = footerGroup.add("image", undefined, File(footerImagePath));
-      var versionText = footerGroup.add("statictext", undefined, scriptVersion);
-        versionText.alignment = "right";
-        versionText.characters = 3
-        versionText.text = scriptVersion
+      createFooter(w,scriptDeets.version)
 
   w.show();
 

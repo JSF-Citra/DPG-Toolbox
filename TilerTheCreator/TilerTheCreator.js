@@ -1,3 +1,5 @@
+//@include "../DPGT-Library.js"
+
 // Tiler the Creator v1.4
 // Written by Samoe (John Sam Fuchs)
 // 7/29/21
@@ -9,26 +11,31 @@
 // 5. Script lays out sheets needed based on 8 tiles per sheet
 // 6. Script takes remainders of all sheets and lays out optimized sheets
 //
-// UPDATES IN V1.4
-// - User can now delete objects from the runlist
-// - User can now select previous order numbers from dropdown menu to improve efficiency
-// - Default quantity set to 25
-// - Visual tweaks and upgrades
+// UPDATES IN V1.5
+// - Script now intelligently gets the Folder Path to save the finished jig to, meaning files do not have to follow any rules regarding naming conventions
 
-// SCRIPT VERSION
-var scriptVersion = "v1.5"
+
+// SCRIPT DETAILS
+var scriptDeets = {
+  name : 'Tiler, The Creator',
+  version : 'v1.5',
+}
 
 // INIT DIRECTORY AND ASSETS
 var scriptPath = $.fileName
-var folderPath = scriptPath.slice(0,-18)
-var templateFilePath = folderPath + '/assets/TILES_TEMPLATE.pdf';
-var headerImagePath = folderPath + '/assets/tiler_header.jpg';
-var footerImagePath = folderPath + '/assets/tiler_footer.jpg';
+// var folderPath = scriptPath.slice(0,-18)
+// var folderPath = getFolderPath($.fileName);
+var headerImagePath = assetPath + 'header_tiler.jpg';
+var templateFilePath = assetPath + 'template_tiler.pdf';
 var templateFile = File(templateFilePath);
+
+// STYLE VARIABLES
+var bgColor = dpgPlum;
 
 // INIT VARIABLES
 var destination = ''
 var filePath = ''
+var fileFolder = ''
 var quantity = 25
 var orderNumber = 00000
 var skuNumber = 00000
@@ -64,12 +71,11 @@ var itemPositions = [
 function windowDisplay() {
 
     // INITIALIZE WINDOW
-    var w = new Window("dialog", "Tiler, The Creator");
+    var w = new Window("dialog", scriptDeets.name);
     w.margins = [0, 0, 0, 0];
   
     // BACKGROUND COLOR
-    w.graphics.backgroundColor = w.graphics.newBrush (w.graphics.BrushType.SOLID_COLOR,
-      [0.415, 0.239, 0.345]);
+    w.graphics.backgroundColor = w.graphics.newBrush (w.graphics.BrushType.SOLID_COLOR,bgColor);
     
     // HEADER IMAGE
     var headerImage = w.add("image", undefined, File(headerImagePath));
@@ -133,6 +139,16 @@ function windowDisplay() {
         sourcePath.text = decodeURI(filePathSelection.fsName);
         source = Folder(sourcePath.text);
       filePath = filePathSelection
+
+      fileFolder = getFolderPath(sourcePath.text)
+
+      // fileFolderArray = []
+      // var fileFolderArray = sourcePath.text.split("\\")
+      // fileFolderArray.length = (fileFolderArray.length-1)
+      // fileFolder = ''
+      // for (i = 0; i < fileFolderArray.length; i++) {
+      //   fileFolder = fileFolder+(fileFolderArray[i] + '\\')
+      // }
       }
     }
   
@@ -203,7 +219,10 @@ function windowDisplay() {
         if (toggleMultiSheet.value == true) {
           createMultipleFiles = true
         }
-        destination = filePath.fsName.slice(0,-62);
+        destination = fileFolder + "/Sheets";
+        var f = new Folder(destination);
+        if (!f.exists)
+            f.create();
 
         for (k = 0; k < itemArray.length; k++) {
           itemInfo = itemArray[k]
@@ -223,12 +242,8 @@ function windowDisplay() {
         cancelButton.alignment = "right";
     
     // FOOTER IMAGE
-    var footerGroup = w.add("group {alignChildren: 'left', orientation: ’stack'}")
-    var footerImage = footerGroup.add("image", undefined, File(footerImagePath));
-    var versionText = footerGroup.add("statictext", undefined, scriptVersion);
-      versionText.alignment = "right";
-      versionText.characters = 3;
-      versionText.text = scriptVersion;
+    createFooter(w,scriptDeets.version);
+    
     w.show();
     return;
 }
@@ -360,23 +375,19 @@ function itemParser (item) {
 function saveAndClose(doc, dest, order, sku, sheetIndex) {
   // Dynamically name the output file based on user-inputted info and sheet number
   if (createMultipleFiles == true) {
-    var destiny = "/TILES_" + order + "_" + sku + "_" + sheetIndex + '.pdf'
+    var fileNameSave = "/TILES_" + order + "_" + sku + "_" + sheetIndex + '.pdf'
   }
   else {
 
     if (sheetsNeeded == 1) {var sheets = ' SHEET.pdf'}
     else {var sheets = ' SHEETS.pdf'}
 
-    var destiny = "/TILES_" + order + "_" + sku + "_" + "PRINT " + sheetsNeeded + sheets
+    var fileNameSave = "/TILES_" + order + "_" + sku + "_" + "PRINT " + sheetsNeeded + sheets
   }
   if (remainderSheet == true) {
-    var destiny = "/TILES_" + order + sku + "_EXTRAS_" + sheetIndex + ".pdf"
+    var fileNameSave = "/TILES_" + order + sku + "_EXTRAS_" + sheetIndex + ".pdf"
   }
-  var saveName = new File(dest + destiny);
-  saveOpts = new PDFSaveOptions();
-  saveOpts.compatibility = PDFCompatibility.ACROBAT7;
-  saveOpts.generateThumbnails = false;
-  saveOpts.preserveEditability = false;
+  var saveName = new File(destination + fileNameSave);
   doc.saveAs(saveName, saveOpts);
   doc.close();
 }

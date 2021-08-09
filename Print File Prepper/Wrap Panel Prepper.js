@@ -1,3 +1,5 @@
+//@include "../DPGT-Library.js"
+
 // Wrap Panel Print File Prepper v1.1
 // Written by Samoe (John Sam Fuchs)
 // 8/3/21
@@ -13,7 +15,6 @@
 // --- Remember original file location
 
 
-
 var scriptVersion = "v1.1"
 
 // Init variables
@@ -23,10 +24,10 @@ var width = 0
 var abs = []
 var box = [0, 0, 0, 0]
 var cutbox = []
-var scriptPath = $.fileName
+var scriptPath = getFolderPath($.fileName)
 var folderPath = scriptPath.slice(0,-25)
 var headerImagePath = folderPath + '/assets/wrapGod_header.jpg';
-var footerImagePath = folderPath + '/assets/wrapGod_footer.jpg';
+// var footerImagePath = folderPath + '/assets/wrapGod_footer.jpg';
 ///////////////////////
 
 // Define Main Function
