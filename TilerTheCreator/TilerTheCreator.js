@@ -1,8 +1,8 @@
 //@include "../DPGT-Library.js"
 
-// Tiler the Creator v1.4
+// Tiler the Creator v1.7
 // Written by Samoe (John Sam Fuchs)
-// 7/29/21
+// 8/10/21
 // 
 // 1. User finds a tile print file (4" x 4" PDF)
 // 2. User defines parameters like order, sku, and quantity
@@ -13,12 +13,15 @@
 //
 // UPDATES IN V1.5
 // - Script now intelligently gets the Folder Path to save the finished jig to, meaning files do not have to follow any rules regarding naming conventions
+// UPDATES IN V1.7
+// - Large visual overhaul + backend improvements
+
 
 
 // SCRIPT DETAILS
 var scriptDeets = {
   name : 'Tiler, The Creator',
-  version : 'v1.5',
+  version : 'v1.7',
 }
 
 // INIT DIRECTORY AND ASSETS
@@ -27,10 +30,11 @@ var scriptPath = $.fileName
 // var folderPath = getFolderPath($.fileName);
 var headerImagePath = assetPath + 'header_tiler.jpg';
 var templateFilePath = assetPath + 'template_tiler.pdf';
+var bottomRowImagePath = assetPath + 'tiler_rowBG.jpg';
 var templateFile = File(templateFilePath);
 
 // STYLE VARIABLES
-var bgColor = dpgPlum;
+var bgColor = colors.dpgPlum;
 
 // INIT VARIABLES
 var destination = ''
@@ -71,7 +75,7 @@ var itemPositions = [
 function windowDisplay() {
 
     // INITIALIZE WINDOW
-    var w = new Window("dialog", scriptDeets.name);
+    var w = new Window("dialog", scriptDeets.name, undefined,);
     w.margins = [0, 0, 0, 0];
   
     // BACKGROUND COLOR
@@ -80,58 +84,73 @@ function windowDisplay() {
     // HEADER IMAGE
     var headerImage = w.add("image", undefined, File(headerImagePath));
 
-    // INSTRUCTIONS
-    var myInfoGroupInfo = w.add("group");
-    var instr1 = myInfoGroupInfo.add("statictext", undefined, "1. Type in the Order, SKU number, and desired Quantity")
-      instr1.alignment = "left"
-    var instr2 = myInfoGroupInfo.add("statictext", undefined, "2. Click BROWSE to select the tile print file")
-      instr2.alignment = "left"
-    var instr3 = myInfoGroupInfo.add("statictext", undefined, "3. Click ADD TO QUEUE")
-      instr3.alignment = "left"
-    var instr4 = myInfoGroupInfo.add("statictext", undefined, "4. Repeat the above steps until you are ready to process the entire batch")
-      instr4.alignment = "left"
-    var instr5 = myInfoGroupInfo.add("statictext", undefined, "5. Click Submit and WAIT until all the files have processed!")
-      instr5.alignment = "left"
+    // COLUMN 1
+    var column1 = w.add("group");
+      column1.orientation = "row";
+      var masterGroup = column1.add("group");
+        masterGroup.orientation = "column";
+      var masterGroup2 = column1.add("group");
+        masterGroup2.orientation = "column";
 
-    myInfoGroupInfo.alignment = "center";
-    myInfoGroupInfo.orientation = "column";
+    // // INSTRUCTIONS
+    // var myInfoGroupInfo = masterGroup.add("group");
+    // var instr1 = myInfoGroupInfo.add("statictext", undefined, "1. Type in the Order, SKU number, and desired Quantity")
+    //   instr1.alignment = "left"
+    // var instr2 = myInfoGroupInfo.add("statictext", undefined, "2. Click BROWSE to select the tile print file")
+    //   instr2.alignment = "left"
+    // var instr3 = myInfoGroupInfo.add("statictext", undefined, "3. Click ADD TO QUEUE")
+    //   instr3.alignment = "left"
+    // var instr4 = myInfoGroupInfo.add("statictext", undefined, "4. Repeat the above steps until you are ready to process the entire batch")
+    //   instr4.alignment = "left"
+    // var instr5 = myInfoGroupInfo.add("statictext", undefined, "5. Click Submit and WAIT until all the files have processed!")
+    //   instr5.alignment = "left"
+
+    // myInfoGroupInfo.alignment = "center";
+    // myInfoGroupInfo.orientation = "column";
 
     // INITIALIZE PANEL
-    var inputPanel = w.add('panel');
+    var inputPanel = masterGroup.add('panel');
+    
     inputPanel.graphics.backgroundColor = w.graphics.newBrush (w.graphics.BrushType.SOLID_COLOR,[.35, .35, .35]);
 
 
     // ORDER NUMBER INPUT
     var myInputGroupInfo = inputPanel.add("group");
-      myInputGroupInfo.add("statictext", undefined, "Order: ")
-      var group = myInputGroupInfo.add ("group {alignChildren: 'left', orientation: ’stack'}");
-      orderList = group.add ("dropdownlist", undefined, ordersTyped);
-      var orderNumberText = group.add ("edittext");
-      orderList.preferredSize.width = 100; orderList.preferredSize.height = 24;
-      orderNumberText.preferredSize.width = 80; orderNumberText.preferredSize.height = 24;
-      orderList.onChange = function () {
-         orderNumberText.text = orderList.selection.text;
-         orderNumberText.active = true;
-      }
+      myInputGroupInfo.orientation = "column";
+      myInputGroupInfo.alignment = "left";
+      var orderGroup = myInputGroupInfo.add("group");
+          var orderStaticText = orderGroup.add("statictext", undefined, "Order: ")
+            orderStaticText.characters = 4
+          var group = orderGroup.add ("group {alignChildren: 'left', orientation: ’stack'}");
+          orderList = group.add ("dropdownlist", undefined, ordersTyped);
+          var orderNumberText = group.add ("edittext");
+          orderList.preferredSize.width = 100; orderList.preferredSize.height = 24;
+          orderNumberText.preferredSize.width = 80; orderNumberText.preferredSize.height = 24;
+          orderList.onChange = function () {
+            orderNumberText.text = orderList.selection.text;
+            orderNumberText.active = true;
+          }
 
     // SKU NUMBER INPUT
-    myInputGroupInfo.add("statictext", undefined, "SKU: ")
-      var skuNumberText = myInputGroupInfo.add("edittext", undefined, "")
-          skuNumberText.characters = 8;                  
+    var skuGroup = myInputGroupInfo.add("group");
+          skuGroup.alignment = "left";
+        var skuStaticText = skuGroup.add("statictext", undefined, "SKU: ")
+          skuStaticText.characters = 4;
+      var skuNumberText = skuGroup.add("edittext", undefined, "")
+          skuNumberText.characters = 9;                  
           skuNumber = skuNumberText.text
 
     // QUANTITY INPUT
-    myInputGroupInfo.add("statictext", undefined, "Quantity: ")
-      var QuantityText = myInputGroupInfo.add("edittext", undefined, "25")
-          QuantityText.characters = 4;                  
-          quantity = QuantityText.text
+    var qtyGroup = myInputGroupInfo.add("group");
+      qtyGroup.alignment = "left";
+    qtyGroup.add("statictext", undefined, "Quantity: ")
+    var QuantityText = qtyGroup.add("edittext", undefined, "25")
+        QuantityText.characters = 4;                  
+        quantity = QuantityText.text
       
     // FILE BROWSER INPUT
     var myInputGroupSource = inputPanel.add("group");
       myInputGroupSource.add("statictext", undefined, "Print File: ")
-      var sourcePath = myInputGroupSource.add("edittext", undefined, "Source path")
-          sourcePath.characters = 25;
-          source = sourcePath.text
       var sourceButton = myInputGroupSource.add("button", undefined, "Browse")
           sourceButton.onClick = function() {
       var filePathSelection = File.openDialog("Select the tile file you'd like to print", '*.pdf')
@@ -139,9 +158,7 @@ function windowDisplay() {
         sourcePath.text = decodeURI(filePathSelection.fsName);
         source = Folder(sourcePath.text);
       filePath = filePathSelection
-
       fileFolder = getFolderPath(sourcePath.text)
-
       // fileFolderArray = []
       // var fileFolderArray = sourcePath.text.split("\\")
       // fileFolderArray.length = (fileFolderArray.length-1)
@@ -151,7 +168,6 @@ function windowDisplay() {
       // }
       }
     }
-  
     // REMOVED CODE FOR CUSTOM DESTINATION FOLDER - LEFT HERE JUST IN CASE
 
     // var myInputGroupDestination = w.add("group");
@@ -170,7 +186,7 @@ function windowDisplay() {
     // }
   
     // ADD TO QUEUE BUTTON
-    var myButtonGroup1 = w.add("group");
+    var myButtonGroup1 = masterGroup.add("group");
     var addToListButton = myButtonGroup1.add("button", undefined, "Add to Queue", {name: "ok"});
       addToListButton.onClick = function() {
         itemInfo = {
@@ -185,24 +201,37 @@ function windowDisplay() {
       orderNumberText.text = ""
       }
 
-    //DELETE SELECTION BUTTON
-    var deleteButton = myButtonGroup1.add("button", undefined, "Delete");
-      deleteButton.onClick = function() {
-        // remember which line is selected
-        if (myList.selection === null) {}
-        else {
-        var sel = myList.selection[0].index;
-        for (var i = myList.selection.length-1; i > -1; i--)
-          myList.remove (myList.selection[i]);
-        }
-      }
-
     // LIST BOX
-    var myListBox = w.add("group");
+    var myListBox = masterGroup2.add("group");
     myListBox.alignment = "center";
       var myList = myListBox.add ("listbox", undefined, [],{multiselect: true});
-      myList.minimumSize.width = 440;
-      myList.minimumSize.height = 180;
+      myList.minimumSize.width = 232;
+      myList.minimumSize.height = 154;
+      myList.onChange = function() {
+        if (myList.selection !== null) {
+          deleteButton.enabled = true;
+        }
+        else {
+          deleteButton.enabled = false;
+        }
+      }
+      
+
+    //DELETE SELECTION BUTTON
+    var deleteButton = masterGroup2.add("button", undefined, "Delete");
+    deleteButton.enabled = false;
+    deleteButton.onClick = function() {
+      // remember which line is selected
+      if (myList.selection === null) {}
+      else {
+      deleteButton.enabled = false;
+      for (var i = myList.selection.length-1; i > -1; i--)
+        myList.remove (myList.selection[i]);
+      }
+    }
+   
+
+    
 
     // BOTTOM ROW
     var myButtonGroup = w.add("group");
@@ -241,6 +270,15 @@ function windowDisplay() {
       var cancelButton = myButtonGroup.add("button", undefined, "Cancel");
         cancelButton.alignment = "right";
     
+
+      var sourcePathGroup = w.add("group {alignChildren: 'center', orientation: 'stack'}");
+        var sourcePathBG = sourcePathGroup.add("image", undefined, File(bottomRowImagePath))
+        sourcePathGroup.alignment = "center";
+      var sourcePath = sourcePathGroup.add("statictext", undefined, "Source path")
+      sourcePath.characters = 39;
+      sourcePath.text.alignment = "center";
+      source = sourcePath.text;
+
     // FOOTER IMAGE
     createFooter(w,scriptDeets.version);
     

@@ -14,13 +14,13 @@
 // SCRIPT DETAILS
 var scriptDeets = {
   name : 'Imposition Wizard',
-  version : 'v0.8',
+  version : 'v1.2',
 }
 
 // INIT DIRECTORY AND ASSETS
 var scriptPath = $.fileName
 var folderPath = getFolderPath(scriptPath)
-var headerImagePath = folderPath + '/assets/imposition_header.jpg';
+var headerImagePath = assetPath + 'header_wizard.jpg';
 
 //INIT VARIABLES
 var infoTechCache = {}
@@ -31,6 +31,7 @@ var sheetsNeeded = 1
 var dataLines = []
 var sheetIndex = 1
 var totalQuantity = 0
+var displayTotalQuantity = 0
 /////////////////////
 
 // STYLE VARIABLES
@@ -70,11 +71,25 @@ function windowDisplay() {
       for (i = 0; i < allCSV.length; i++) {
 
         var textLines = CSV.reader.read_in_txt(allCSV[i]);
-        dataLines.push(CSV.reader.textlines_to_data(textLines, ","))
-        var listOrderNumber = dataLines[i].fields[0].field_0
-        var listEntry = "Order " + listOrderNumber + " // Line Items: " + (textLines.length-1)
-        myOrderList.add("item",listEntry)
-      } 
+        var newDataLine = CSV.reader.textlines_to_data(textLines, ",")
+
+        if (contains(dataLines, newDataLine) == false) {
+          dataLines.push(newDataLine);
+          var listOrderNumber = dataLines[i].fields[0].field_0;
+          var lineItems = dataLines[i].fields.length;
+          var listEntry = "Order " + listOrderNumber + " // Line Items: " + (lineItems);
+          // for (m = 0; m < dataLines.length; m++) {
+            for (j = 0; j < dataLines[i].fields.length; j++) {
+              var itemQty = parseInt(dataLines[i].fields[j].field_6);
+              displayTotalQuantity = displayTotalQuantity + itemQty;
+              totalQuantityText.text = "Total Stickers: " + displayTotalQuantity;
+              
+            }
+          }
+          myOrderList.add("item",listEntry)
+        }
+
+      
     }
   }
 
@@ -140,6 +155,10 @@ function windowDisplay() {
   //Adding the submit and cancel buttons
   var myButtonGroup = w.add("group");
     myButtonGroup.alignment = "center";
+  var totalStickersGroup = myButtonGroup.add("group {alignChildren: 'center',orientation: 'stack'}");
+  var rowBGSmall = totalStickersGroup.add("image",undefined,assetPath + 'rowBG_small.jpg')
+  var totalQuantityText = totalStickersGroup.add("statictext",undefined,"Total Stickers: 0")
+    totalQuantityText.characters = 24
   var submitButton = myButtonGroup.add("button", undefined, "Submit");
     submitButton.onClick = function() {
       if (customDestCheck.value == !true) {
