@@ -1,35 +1,21 @@
 //@include "../DPGT-Library.js"
 
-// Tiler the Creator v1.7
+// Metal Rounder v0.1
 // Written by Samoe (John Sam Fuchs)
 // 8/10/21
-// 
-// 1. User finds a tile print file (4" x 4" PDF)
-// 2. User defines parameters like order, sku, and quantity
-// 3. User adds file to queue for processing
-// 4. Once finished queueing, user submits queue
-// 5. Script lays out sheets needed based on 8 tiles per sheet
-// 6. Script takes remainders of all sheets and lays out optimized sheets
-//
-// UPDATES IN V1.5
-// - Script now intelligently gets the Folder Path to save the finished jig to, meaning files do not have to follow any rules regarding naming conventions
-// UPDATES IN V1.7
-// - Large visual overhaul + backend improvements
-
-
 
 // SCRIPT DETAILS
 var scriptDeets = {
-  name : 'Tiler, The Creator',
-  version : 'v1.7',
+  name : 'Metal Rounder',
+  version : 'v0.1',
 }
 
 // INIT DIRECTORY AND ASSETS
 var scriptPath = $.fileName
 // var folderPath = scriptPath.slice(0,-18)
 // var folderPath = getFolderPath($.fileName);
-var headerImagePath = assetPath + 'header_tiler.jpg';
-var templateFilePath = assetPath + 'template_tiler.pdf';
+var headerImagePath = assetPath + 'header_metalRounder.jpg';
+var templateFilePath = assetPath + 'template_metalRounder.pdf';
 var bottomRowImagePath = assetPath + 'tiler_rowBG.jpg';
 var templateFile = File(templateFilePath);
 
@@ -40,13 +26,13 @@ var bgColor = colors.dpgPlum;
 var destination = ''
 var filePath = ''
 var fileFolder = ''
-var quantity = 25
+var quantity = 16
 var orderNumber = 00000
 var skuNumber = 00000
 var itemInfo = {
     order : 00000,
     sku : 00000,
-    qty : 8,
+    qty : 4,
     file : ""
   }
 var itemArray = [];
@@ -60,14 +46,10 @@ var orderList
 
 // Tile positions are hard-coded. Change in the future to dynamically read positions of objects.
 var itemPositions = [
-  [67, 438],
-  [391, 438],
-  [715, 438],
-  [1039, 438],
-  [67, 114],
-  [391, 114],
-  [715, 114],
-  [1039, 114],
+  [-314, -11],
+  [550, -11],
+  [-314 , -876],
+  [550 , -876],
 ]
 // END INIT VARIABLES
 /////////////////////
@@ -77,7 +59,8 @@ function windowDisplay() {
     // INITIALIZE WINDOW
     var w = new Window("dialog", scriptDeets.name, undefined,);
     w.margins = [0, 0, 0, 0];
-  
+    w.spacing = 16;
+
     // BACKGROUND COLOR
     w.graphics.backgroundColor = w.graphics.newBrush (w.graphics.BrushType.SOLID_COLOR,bgColor);
     
@@ -89,8 +72,10 @@ function windowDisplay() {
       column1.orientation = "row";
       var masterGroup = column1.add("group");
         masterGroup.orientation = "column";
+        masterGroup.spacing = 12;
       var masterGroup2 = column1.add("group");
         masterGroup2.orientation = "column";
+        masterGroup2.spacing = 12;
 
     // // INSTRUCTIONS
     // var myInfoGroupInfo = masterGroup.add("group");
@@ -117,7 +102,7 @@ function windowDisplay() {
     // ORDER NUMBER INPUT
     var myInputGroupInfo = inputPanel.add("group");
       myInputGroupInfo.orientation = "column";
-      myInputGroupInfo.alignment = "left";
+      myInputGroupInfo.alignChildren = "fill";
       var orderGroup = myInputGroupInfo.add("group");
           var orderStaticText = orderGroup.add("statictext", undefined, "Order: ")
             orderStaticText.characters = 4
@@ -133,7 +118,7 @@ function windowDisplay() {
 
     // SKU NUMBER INPUT
     var skuGroup = myInputGroupInfo.add("group");
-          skuGroup.alignment = "left";
+          skuGroup.alignment = "fill";
         var skuStaticText = skuGroup.add("statictext", undefined, "SKU: ")
           skuStaticText.characters = 4;
       var skuNumberText = skuGroup.add("edittext", undefined, "")
@@ -142,9 +127,9 @@ function windowDisplay() {
 
     // QUANTITY INPUT
     var qtyGroup = myInputGroupInfo.add("group");
-      qtyGroup.alignment = "left";
+      qtyGroup.alignment = "fill";
     qtyGroup.add("statictext", undefined, "Quantity: ")
-    var QuantityText = qtyGroup.add("edittext", undefined, "25")
+    var QuantityText = qtyGroup.add("edittext", undefined, "16")
         QuantityText.characters = 4;                  
         quantity = QuantityText.text
       
@@ -153,21 +138,15 @@ function windowDisplay() {
       myInputGroupSource.add("statictext", undefined, "Print File: ")
       var sourceButton = myInputGroupSource.add("button", undefined, "Browse")
           sourceButton.onClick = function() {
-      var filePathSelection = File.openDialog("Select the tile file you'd like to print", '*.pdf')
+      var filePathSelection = File.openDialog("Select the metal round file you'd like to print", '*.pdf')
       if (filePathSelection) {
         sourcePath.text = decodeURI(filePathSelection.fsName);
         source = Folder(sourcePath.text);
       filePath = filePathSelection
       fileFolder = getFolderPath(sourcePath.text)
-      // fileFolderArray = []
-      // var fileFolderArray = sourcePath.text.split("\\")
-      // fileFolderArray.length = (fileFolderArray.length-1)
-      // fileFolder = ''
-      // for (i = 0; i < fileFolderArray.length; i++) {
-      //   fileFolder = fileFolder+(fileFolderArray[i] + '\\')
-      // }
       }
     }
+
     // REMOVED CODE FOR CUSTOM DESTINATION FOLDER - LEFT HERE JUST IN CASE
 
     // var myInputGroupDestination = w.add("group");
@@ -197,7 +176,7 @@ function windowDisplay() {
         }
       itemArray[itemArray.length] = itemInfo
       orderList.add('item', itemInfo.order);
-      myList.add("item", "Order: " + itemInfo.order + " // SKU: " + itemInfo.sku + " // QTY: " + itemInfo.qty);
+      myList.add("item", "Order: " + itemInfo.order + " | SKU: " + itemInfo.sku + " | QTY: " + itemInfo.qty);
       orderNumberText.text = ""
       }
 
@@ -229,13 +208,12 @@ function windowDisplay() {
         myList.remove (myList.selection[i]);
       }
     }
-   
 
-    
     w.add("image",undefined,assetPath + 'divider.jpg')
 
     // BOTTOM ROW
     var myButtonGroup = w.add("group");
+    myButtonGroup.spacing = 10;
     myButtonGroup.alignment = "center";
 
       // TOGGLE MULTI-SHEET VS SINGLE SHEET
@@ -318,7 +296,7 @@ function createJigRemainder () {
         remainderOrders[remainderOrders.length] = remainderArray[g].order
       }
 
-      if (loopIndex >= 8) {
+      if (loopIndex >= 4) {
         break;
       }
     }
@@ -343,8 +321,8 @@ function CreateJig(itemInformant) {
     var remainingQty = itemInformant.qty
     var order = itemInformant.order
     var sku = itemInformant.sku
-    remainder = Math.ceil(remainingQty % 8)
-    sheetsNeeded = Math.floor(remainingQty / 8)
+    remainder = Math.ceil(remainingQty % 4)
+    sheetsNeeded = Math.floor(remainingQty / 4)
     if (sheetsNeeded == 0) {
       sheetsNeeded = 1
     }
@@ -361,7 +339,7 @@ function CreateJig(itemInformant) {
       thePDF.position = itemPositions[i];
       loopIndex++
       // Break the loop after 8 tiles
-      if (loopIndex >= 8) {
+      if (loopIndex >= 4) {
         break;
       }
     }
@@ -374,7 +352,7 @@ function CreateJig(itemInformant) {
       saveAndClose(doc, destination, order, sku, sheetIndex);
       sheetIndex++;
       if (createMultipleFiles == true) {
-          if (remainingQty < 8) {
+          if (remainingQty < 4) {
             if (itemArray.length == 1) {
               CreateJig(itemInfo);
             }
@@ -416,17 +394,17 @@ function itemParser (item) {
 function saveAndClose(doc, dest, order, sku, sheetIndex) {
   // Dynamically name the output file based on user-inputted info and sheet number
   if (createMultipleFiles == true) {
-    var fileNameSave = "/TILES_" + order + "_" + sku + "_" + sheetIndex + '.pdf'
+    var fileNameSave = "/ROUNDS_" + order + "_" + sku + "_" + sheetIndex + '.pdf'
   }
   else {
 
     if (sheetsNeeded == 1) {var sheets = ' SHEET.pdf'}
     else {var sheets = ' SHEETS.pdf'}
 
-    var fileNameSave = "/TILES_" + order + "_" + sku + "_" + "PRINT " + sheetsNeeded + sheets
+    var fileNameSave = "/ROUNDS_" + order + "_" + sku + "_" + "PRINT " + sheetsNeeded + sheets
   }
   if (remainderSheet == true) {
-    var fileNameSave = "/TILES_" + order + sku + "_EXTRAS_" + sheetIndex + ".pdf"
+    var fileNameSave = "/ROUNDS_" + order + sku + "_EXTRAS_" + sheetIndex + ".pdf"
   }
   var saveName = new File(destination + fileNameSave);
   doc.saveAs(saveName, saveOpts);
