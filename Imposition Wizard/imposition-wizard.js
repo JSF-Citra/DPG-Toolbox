@@ -1,7 +1,7 @@
 //@include "csvParser.js"
 //@include "../DPGT-Library.js"
 
-// TECHSTYLES PROCESSING BUDDY V1.0
+// TECHSTYLES IMPOSITION WIZARD V1.0
 // Written by Dave Blois and John Sam Fuchs
 // Delta Print Group 2021
 // 
@@ -14,7 +14,7 @@
 // SCRIPT DETAILS
 var scriptDeets = {
   name : 'Imposition Wizard',
-  version : 'v1.2',
+  version : 'v1.31',
 }
 
 // INIT DIRECTORY AND ASSETS
@@ -32,6 +32,9 @@ var dataLines = []
 var sheetIndex = 1
 var totalQuantity = 0
 var displayTotalQuantity = 0
+var totalLengthProcessed = 0
+var rollIndex = 1
+var separateByRoll = false
 /////////////////////
 
 // STYLE VARIABLES
@@ -56,42 +59,39 @@ function windowDisplay() {
     //Adding the Source Folder Path Input
   var myInputGroupSource = inputPanel.add("group");
     myInputGroupSource.alignment = "center";
-  myInputGroupSource.add("statictext", undefined, "Source: ")
-  var sourcePath = myInputGroupSource.add("edittext", undefined, "")
-  sourcePath.characters = 26;
-  source = sourcePath.text
-  var sourceButton = myInputGroupSource.add("button", undefined, "Browse")
-  sourceButton.onClick = function() {
-    var folderPath3 = Folder.selectDialog("Select the folder where you'd like to pull files from")
-    if (folderPath3) {
-      sourcePath.text = decodeURI(folderPath3.fsName);
-      source = Folder(sourcePath.text);
+    myInputGroupSource.add("statictext", undefined, "Source: ")
+    var sourcePath = myInputGroupSource.add("edittext", undefined, "")
+      sourcePath.characters = 26;
+      source = sourcePath.text
+    var sourceButton = myInputGroupSource.add("button", undefined, "Browse")
+      sourceButton.onClick = function() {
+        var folderPath3 = Folder.selectDialog("Select the folder where you'd like to pull files from")
+        if (folderPath3) {
+          sourcePath.text = decodeURI(folderPath3.fsName);
+          source = Folder(sourcePath.text);
 
-      var allCSV = source.getFiles(/\.csv$/i)
-      for (i = 0; i < allCSV.length; i++) {
+          // Get all CSV files
+          var allCSV = source.getFiles(/\.csv$/i)
 
-        var textLines = CSV.reader.read_in_txt(allCSV[i]);
-        var newDataLine = CSV.reader.textlines_to_data(textLines, ",")
-
-        if (contains(dataLines, newDataLine) == false) {
-          dataLines.push(newDataLine);
-          var listOrderNumber = dataLines[i].fields[0].field_0;
-          var lineItems = dataLines[i].fields.length;
-          var listEntry = "Order " + listOrderNumber + " // Line Items: " + (lineItems);
-          // for (m = 0; m < dataLines.length; m++) {
-            for (j = 0; j < dataLines[i].fields.length; j++) {
-              var itemQty = parseInt(dataLines[i].fields[j].field_6);
-              displayTotalQuantity = displayTotalQuantity + itemQty;
-              totalQuantityText.text = "Total Stickers: " + displayTotalQuantity;
-              
+          for (i = 0; i < allCSV.length; i++) {
+            var textLines = CSV.reader.read_in_txt(allCSV[i]);
+            var newDataLine = CSV.reader.textlines_to_data(textLines, ",")
+            if (contains(dataLines, newDataLine) == false) {
+              dataLines.push(newDataLine);
+              var listOrderNumber = dataLines[i].fields[0].field_0;
+              var lineItems = dataLines[i].fields.length;
+              // Add order information to listbox for user visibility
+              var listEntry = "Order " + listOrderNumber + " // Line Items: " + (lineItems);
+              for (j = 0; j < dataLines[i].fields.length; j++) {
+                var itemQty = parseInt(dataLines[i].fields[j].field_6);
+                displayTotalQuantity = displayTotalQuantity + itemQty;
+                totalQuantityText.text = "Total Stickers: " + displayTotalQuantity;
+              }
             }
+            myOrderList.add("item",listEntry)
           }
-          myOrderList.add("item",listEntry)
-        }
-
-      
-    }
-  }
+        } 
+      }
 
   // INFO PANEL - EXTRA QUANTITY AND SPACING
   var myInputGroupInfo = inputPanel.add("group");
@@ -116,8 +116,10 @@ function windowDisplay() {
   var inputPanel2 = w.add("panel");
     inputPanel2.graphics.backgroundColor = w.graphics.newBrush (w.graphics.BrushType.SOLID_COLOR,[.35, .35, .35]);
     inputPanel2.alignment = "center";
+  
+  var optionsGroup = inputPanel2.add ("group") //Make a group for options so they will lay side by side instead of vertically
 
-  var customDestCheck = inputPanel2.add ("radiobutton", undefined, "Custom Output Destination");
+  var customDestCheck = optionsGroup.add ("checkbox", undefined, "Custom Output Destination");
     customDestCheck.onClick = function() {
       if (myInputGroupDestination.enabled == true) {
         customDestCheck.value = false;
@@ -126,6 +128,15 @@ function windowDisplay() {
       else {
         customDestCheck.value = true;
         myInputGroupDestination.enabled = true;
+      }
+    }
+  var customRollCheck = optionsGroup.add ("checkbox", undefined, "Separate Into Rolls");
+    customRollCheck.onClick = function() {
+      if (separateByRoll == true) {
+        separateByRoll = false
+      }
+      else {
+        separateByRoll = true
       }
     }
 
@@ -162,10 +173,11 @@ function windowDisplay() {
   var submitButton = myButtonGroup.add("button", undefined, "Submit");
     submitButton.onClick = function() {
       if (customDestCheck.value == !true) {
-        destination = source + "/Sheets";
-        var f = new Folder(destination);
-        if (!f.exists)
+        defaultDestination = source + "/Sheets";
+        var f = new Folder(defaultDestination);
+        if (!f.exists) {
             f.create();
+        }
       }
       FolderLooper(source, extraPrints, parseFloat(space.text));
       return w.close();
@@ -216,6 +228,25 @@ function newFile(quantity, width, height, space, canvasWidth, canvasHeight, file
         var docHeight = points((Math.ceil((RemainingPrintQTY + 1) / columns) * (height + space)))
       }
 
+      if (separateByRoll == true) {
+        totalLengthProcessed = totalLengthProcessed + docHeight
+        //Rolls of vinyl come in 150 feet, or 1800 inches. Leave 100 inches as safe zone for cutter reg marks and loading/unloading material
+        if (totalLengthProcessed >= points(1700)) { 
+          rollIndex++
+          totalLengthProcessed = 0;
+        }
+        var split = destination.split("/")
+        if (split[split.length-1] != "Roll " + rollIndex) {
+          destination = defaultDestination + "/Roll " + rollIndex;
+          var e = new Folder(destination);
+          if (!e.exists)
+            e.create();
+        }
+      }
+      else {
+        destination = defaultDestination;
+      }
+
       var doc = app.documents.add(
         DocumentColorSpace.CMYK,
         docWidth,
@@ -226,13 +257,26 @@ function newFile(quantity, width, height, space, canvasWidth, canvasHeight, file
       var xPosition = 0;
       var yPosition = docHeight;
 
+      // for (var i = 0; i < qtyPerSheet+1; i++) {
+      //   if (i == 0) {
+      //     var thePDF = doc.groupItems.createFromFile(infoPath); // ADD INFOTECH AS FIRST ITEM ON SHEET
+      //   }
+      //   else{
+      //     var thePDF = doc.groupItems.createFromFile(filePath); // ADD PRINT FILES ON SHEET
+      //   }
+
       for (var i = 0; i < qtyPerSheet+1; i++) {
         if (i == 0) {
           var thePDF = doc.groupItems.createFromFile(infoPath); // ADD INFOTECH AS FIRST ITEM ON SHEET
         }
-        else{
+        else if (i == 1) {
           var thePDF = doc.groupItems.createFromFile(filePath); // ADD PRINT FILES ON SHEET
         }
+        else {
+          var thePDF = doc.placedItems.add()
+          thePDF.file = File(filePath);
+        }
+
 
         if ( i % columns === 0 && i !== 0 ) { // IF WE REACH THE END OF THE ROW, MOVE TO NEXT ROW
           xPosition = 0;
@@ -245,7 +289,7 @@ function newFile(quantity, width, height, space, canvasWidth, canvasHeight, file
       
       // UPDATE VARIABLES AFTER CREATING SHEET
       RemainingPrintQTY = (RemainingPrintQTY - qtyPerSheet)
-      dest = dest + "/" + order + "_" + SKU + "_" + width + "x" + height + "_Qty" + totalQuantity + "_Sheet " + sheetIndex + ".pdf";
+      dest = destination + "/" + order + "_" + SKU + "_" + width + "x" + height + "_Qty" + totalQuantity + "_Sheet " + sheetIndex + ".pdf";
       sheetsNeeded = (sheetsNeeded - 1)
       sheetIndex = (sheetIndex + 1)
       saveAndClose(doc, dest);
@@ -383,7 +427,7 @@ function FolderLooper(srcFolder, extraPrints, space) {
       qtyPerSheet = printQuantity
     }
     sheetsNeeded = Math.ceil(printQuantity / qtyPerSheet)
-    RemainingPrintQTY = printQuantity
+    RemainingPrintQTY = printQuantity + sheetsNeeded //add sheets needed to compensate for infotech taking spot 1 on each sheet
 
     newFile(printQuantity, itemSpecs.Width, itemSpecs.Height, space, canvasWidth, canvasHeight, allPrintPDFs[i], allInfoPDFs[i], destination, itemSpecs.Batch, columns, sheetsNeeded, qtyPerSheet, rows, itemSpecs.Order, itemSpecs.SKU)
 

@@ -1,8 +1,8 @@
 //@include "../DPGT-Library.js"
 
-// Wrap Panel Print File Prepper v1.1
+// Wrap Panel Print File Prepper v1.2
 // Written by Samoe (John Sam Fuchs)
-// 8/3/21
+// 8/11/21
 // 
 // Takes selected elements, asks for a file name, creates print file
 // Print file to include label, .25" bleed on every side, and a cut line
@@ -14,8 +14,11 @@
 // --- Loop through all PerfCutContour paths
 // --- Remember original file location
 
-
-var scriptVersion = "v1.1"
+// SCRIPT DETAILS
+var scriptDeets = {
+    name : 'Wrap Panel Print File Prepper',
+    version : 'v1.2',
+  }
 
 // Init variables
 var doc1 = app.activeDocument;
@@ -26,7 +29,7 @@ var box = [0, 0, 0, 0]
 var cutbox = []
 var scriptPath = getFolderPath($.fileName)
 var folderPath = scriptPath.slice(0,-25)
-var headerImagePath = folderPath + '/assets/wrapGod_header.jpg';
+var headerImagePath = assetPath + 'header_wrapper.jpg';
 // var footerImagePath = folderPath + '/assets/wrapGod_footer.jpg';
 ///////////////////////
 
@@ -119,8 +122,7 @@ var w = new Window("dialog", "Wrap Panel File Prepper");
     // SET MARGINS
     w.margins = [0, 0, 0, 0];
     // BACKGROUND COLOR
-    w.graphics.backgroundColor = w.graphics.newBrush (w.graphics.BrushType.SOLID_COLOR,
-        [0.415, 0.239, 0.345]);
+    w.graphics.backgroundColor = w.graphics.newBrush (w.graphics.BrushType.SOLID_COLOR,dpgPlum);
     
     // HEADER IMAGE
     var headerImage = w.add("image", undefined, File(headerImagePath));
@@ -130,6 +132,7 @@ var w = new Window("dialog", "Wrap Panel File Prepper");
     myEditGroup.add("statictext", undefined, "Print Label: ")
     var printLabelText = myEditGroup.add("edittext", undefined, "PANEL ")
         printLabelText.characters = 20
+        printLabelText.active = true;
 
     // BUTTON PANEL
     var myButtonGroup = w.add("group")
@@ -148,7 +151,7 @@ var w = new Window("dialog", "Wrap Panel File Prepper");
     cancelButton.alignment = "center";
 
     // FOOTER IMAGE
-    var footerImage = w.add("image", undefined, File(footerImagePath));
+    createFooter(w, scriptDeets.version)
 
     w.show();
     return;

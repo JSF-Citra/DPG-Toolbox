@@ -1,3 +1,6 @@
+//@include "../DPGT-Library.js"
+
+
 // DPG Print File Prepper v0.02
 // Written by Samoe (John Sam Fuchs)
 // 7/7/21
@@ -11,7 +14,30 @@ var doc = app.activeDocument;
 var height = doc.height
 var width = doc.width
 var abs = doc.artboards
+var bgColor = dpgPlum;
+var headerImagePath = assetPath + "header_prepper.jpg"
 ///////////////////////
+
+function windowDisplay() {
+    // INITIALIZE WINDOW
+    var w = new Window("dialog", scriptDeets.name, undefined,);
+    w.margins = [0, 0, 0, 0];
+    // BACKGROUND COLOR
+    w.graphics.backgroundColor = w.graphics.newBrush (w.graphics.BrushType.SOLID_COLOR,bgColor);
+    // HEADER IMAGE
+    var headerImage = w.add("image", undefined, File(headerImagePath));
+
+
+
+
+
+    
+}
+
+
+
+
+
 
 // Main Function
 function PreparePrintFile() {
@@ -51,4 +77,4 @@ function PreparePrintFile() {
 }
 
 // Execute the script
-PreparePrintFile();
+windowDisplay();
