@@ -76,7 +76,7 @@ function windowDisplay() {
           for (i = 0; i < allCSV.length; i++) {
             var textLines = CSV.reader.read_in_txt(allCSV[i]);
             var newDataLine = CSV.reader.textlines_to_data(textLines, ",")
-            if (contains(dataLines, newDataLine) == false) {
+            if (containsOrder(dataLines, newDataLine) == false) {
               dataLines.push(newDataLine);
               var listOrderNumber = dataLines[i].fields[0].field_0;
               var lineItems = dataLines[i].fields.length;
