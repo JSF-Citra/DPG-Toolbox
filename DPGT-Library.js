@@ -55,7 +55,7 @@ saveOpts.generateThumbnails = false;
 saveOpts.preserveEditability = false;
 
 // ARRAY CONTAINS FUNCTION
-function contains(a, obj) {
+function containsOrder(a, obj) {
     for (var i = 0; i < a.length; i++) {
         if (a[i].fields[0].field_0 == obj.fields[0].field_0) {
             return true;
