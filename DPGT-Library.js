@@ -1,6 +1,7 @@
 // INIT
 var toolboxPath = getFolderPath($.fileName)
 var assetPath = toolboxPath + "/assets/"
+var historyPath = assetPath + "/history/"
 
 // IMAGES
 var footerImagePath = assetPath + "footer.jpg"
@@ -57,6 +58,16 @@ saveOpts.preserveEditability = false;
 function contains(a, obj) {
     for (var i = 0; i < a.length; i++) {
         if (a[i].fields[0].field_0 == obj.fields[0].field_0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// MORE GENERAL ARRAY INCLUDES FUNCTION
+function arrayContains(a, obj){
+    for (var i = 0; i < a.length; i++) {
+        if (a[i] == obj) {
             return true;
         }
     }

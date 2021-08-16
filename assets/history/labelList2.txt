@@ -1,0 +1,4 @@
+Main Stage Left;
+Main Stage Right;
+VIP Bar Left;
+VIP Bar Restroom;

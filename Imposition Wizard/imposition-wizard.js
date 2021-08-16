@@ -203,7 +203,6 @@ function saveAndClose(doc, dest) {
   doc.close();
 }
 
-
 // CREATE NEW FILE
 function newFile(quantity, width, height, space, canvasWidth, canvasHeight, filePath, infoPath, dest, batch, columns, sheetCount, qtyPerSheet, rows, order, SKU) {
 
@@ -265,13 +264,13 @@ function newFile(quantity, width, height, space, canvasWidth, canvasHeight, file
       //     var thePDF = doc.groupItems.createFromFile(filePath); // ADD PRINT FILES ON SHEET
       //   }
 
-      for (var i = 0; i < qtyPerSheet+1; i++) {
+      for (var i = 0; i < qtyPerSheet; i++) {
         if (i == 0) {
           var thePDF = doc.groupItems.createFromFile(infoPath); // ADD INFOTECH AS FIRST ITEM ON SHEET
         }
-        else if (i == 1) {
-          var thePDF = doc.groupItems.createFromFile(filePath); // ADD PRINT FILES ON SHEET
-        }
+        // else if (i == 1) {
+        //   var thePDF = doc.groupItems.createFromFile(filePath); // ADD PRINT FILES ON SHEET
+        // }
         else {
           var thePDF = doc.placedItems.add()
           thePDF.file = File(filePath);
@@ -405,8 +404,8 @@ function fileNameParser(filename) {
 // LOOPER - EXECUTES THE MAIN FUNCTION FOR EVERY FILE IN THE FOLDER
 function FolderLooper(srcFolder, extraPrints, space) {
 
-  var allPrintPDFs = srcFolder.getFiles(/PRINT\.pdf$/i);
-  var allInfoPDFs = srcFolder.getFiles(/TICKET\.pdf$/i);
+  var allPrintPDFs = srcFolder.getFiles(/_2\.pdf$/i);
+  var allInfoPDFs = srcFolder.getFiles(/_1\.pdf$/i);
 
   // RUN THE INFOCUT FUNCTION ON ALL INFOTECH FILES
   for (var i = 0; i < allInfoPDFs.length; i++) {

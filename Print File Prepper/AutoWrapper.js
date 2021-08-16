@@ -1,24 +1,15 @@
 //@include "../DPGT-Library.js"
 
-// Wrap Panel Print File Prepper v1.2
+// Wrap Panel Print File Prepper v1.5
 // Written by Samoe (John Sam Fuchs)
-// 8/11/21
+// 8/16/21
 // 
-// Takes selected elements, asks for a file name, creates print file
-// Print file to include label, .25" bleed on every side, and a cut line
-
-// WISHLIST
-// - Automatically detect how many panels
-// - Auto layout panels?
-// - Process all panels at once
-// --- Loop through all PerfCutContour paths
-// --- Remember original file location
 
 // SCRIPT DETAILS
 var scriptDeets = {
     name : 'Wrap Panel Print File Prepper',
-    version : 'v1.2',
-  }
+    version : 'v1.5',
+}
 
 // Init variables
 var doc1 = app.activeDocument;
@@ -28,65 +19,73 @@ var abs = []
 var box = [0, 0, 0, 0]
 var cutbox = []
 var headerImagePath = assetPath + 'header_wrapper.jpg';
+var panelPaths = [];
+var autoWrap = false;
 
-// Init User History
-var historyFile = File(historyPath + 'labelList.txt');
-historyFile.encoding = "utf-8";
-historyFile.open('r');
-historyFileText = historyFile.read();
-historyFileText = historyFileText.split(';\n')
-historyFileText.length = historyFileText.length-1
-
-var historyFile2 = File(historyPath + 'labelList2.txt');
-historyFile2.encoding = "utf-8";
-historyFile2.open('r');
-historyFileText2 = historyFile2.read();
-historyFileText2 = historyFileText2.split(';\n')
-historyFileText2.length = historyFileText2.length-1
-
-var historyFile3 = File(historyPath + 'labelList3.txt');
-historyFile3.encoding = "utf-8";
-historyFile3.open('r');
-historyFileText3 = historyFile3.read();
-historyFileText3 = historyFileText3.split(';\n')
-historyFileText3.length = historyFileText3.length-1
-
-var destinationHistory = File(historyPath + 'destinationHistory.txt');
-destinationHistory.encoding = "utf-8";
-destinationHistory.open('r');
-destinationHistory = destinationHistory.read();
+// User History
+var historyFile1 = readHistFile('labelList.txt');
+var historyFile2 = readHistFile('labelList2.txt');
+var historyFile3 = readHistFile('labelList3.txt');
+var destinationHistory = readHistFile('destinationHistory.txt');
 ///////////////////////
 
-// Define Main Function
-function PreparePrintFile(label, filename) {
 
-////// 1. INITIAL ACTIONS
+// PRE-MAIN FUNCTION
+function prepareToStart(label, filename) {
+    if (autoWrap == true) {
+        for (i = 0; i < doc1.pathItems.length; i++) {
+            var pathItem = doc1.pathItems[i]
+            if (pathItem.typename == "PathItem") {
+                if (pathItem.strokeColor.typename == "SpotColor") {
+                    panelPaths.push(pathItem);
+                }
+            }
+        }
+        // No PerfCutContour failsafe
+        if (panelPaths.length<1) {
+            alert("No PerfCutContour paths found.")
+            return
+        }
+        for (j = 0; j < panelPaths.length; j++) {
+            app.executeMenuCommand("deselectall");
+            if (app.activeDocument.layers.length<2) {
+                alert("Only one layer found. Move cut lines to top layer, artwork to bottom layer.")
+                return
+            }
+            else {
+                app.activeDocument.activeLayer = app.activeDocument.layers[app.activeDocument.layers.length-1];
+                app.activeDocument.activeLayer.hasSelectedArtwork = true;
+                panelPaths[j].selected = true;
+                PreparePrintFile(label, filename, j+1)
+            }
+        }
+    }
+    else {
+        PreparePrintFile(label, filename)
+    }
+}
+
+// MAIN FUNCTION
+function PreparePrintFile(label, filename, panelInteger) {
 
     // MAKE NEW FILE WITH SELECTION
-
     app.executeMenuCommand("copy");
-    doc = app.documents.add(
-        DocumentColorSpace.CMYK,
-        (300*72),
-        (300*72),
-        1
-    );
+    doc = app.documents.add(DocumentColorSpace.CMYK, (300*72), (300*72), 1);
     abs = doc.artboards[0]
 
     // PASTE SELECTION AND SET UP ARTBOARD
     app.executeMenuCommand("paste");
 
+    // CREATE ARTBOARD WITH EXACT BLEED
     for (i = 0; i < doc.pathItems.length; i++) {
         var pathItem = doc.pathItems[i]
-        if (pathItem.typename == "PathItem") {
-            if (pathItem.strokeColor.typename == "SpotColor") {
-                cutbox = pathItem.geometricBounds;
-                    pathItem.left = (pathItem.left-1.8);
-                    pathItem.top = (pathItem.top+1.8);
-                    pathItem.width = (pathItem.width+3.6);
-                    pathItem.height = (pathItem.height+3.6);
-                artbox = pathItem.geometricBounds;
-            }
+        if (pathItem.strokeColor.typename == "SpotColor") {
+            cutbox = pathItem.geometricBounds;
+                pathItem.left = (pathItem.left-1.8);
+                pathItem.top = (pathItem.top+1.8);
+                pathItem.width = (pathItem.width+3.6);
+                pathItem.height = (pathItem.height+3.6);
+            artbox = pathItem.geometricBounds;
         }
     }
 
@@ -123,10 +122,10 @@ function PreparePrintFile(label, filename) {
         cutLine.strokeWidth = 0.2;
         cutLine.strokeColor = PerfCutContour;
         cutLine.fillColor = NoColor;
-            
+    
     // CREATE LABEL
     var printLabel = app.activeDocument.textFrames.add("");
-        printLabel.contents = label;
+        printLabel.contents = label + " " + panelInteger;
         printLabel.position = [(artbox[0]+2), (artbox[1]-2)]
         whiteCMYK = new CMYKColor();
             whiteCMYK.cyan = 0;
@@ -135,15 +134,28 @@ function PreparePrintFile(label, filename) {
             whiteCMYK.black = 0;
         printLabel.textRange.fillColor = whiteCMYK;
 
-    saveAndClose(doc, destination, filename)
+    saveAndClose(doc, destination, filename, panelInteger)
 
 return;
 }
 
+// INITIALIZE USER HISTORY
+function readHistFile(histFile) {
+    var historyFile = File(historyPath + histFile)
+        historyFile.encoding = "utf-8";
+        historyFile.open('r');
+        historyFileText = historyFile.read();
+        historyFileText = historyFileText.split(';\n')
+        if (historyFileText.length > 1) {
+            historyFileText.length = historyFileText.length-1
+        }
+        return historyFileText;
+}
+
+// CREATE SCRIPT WINDOW
 function showWindow() {
-    // Window Setup
     var w = new Window("dialog", "Wrap Panel File Prepper");
-    
+
     // SET MARGINS
     w.margins = [0, 0, 0, 0];
     // BACKGROUND COLOR
@@ -152,39 +164,37 @@ function showWindow() {
     // HEADER IMAGE
     var headerImage = w.add("image", undefined, File(headerImagePath));
 
-    historyFile = File(historyFile);
-
     // LABEL INPUT
-    var myEditGroup = w.add("group")
-        myEditGroup.add("statictext", undefined, "Label Part 1: ")
-            var group = myEditGroup.add ("group {alignChildren: 'left', orientation: ’stack'}");
-                labelList = group.add ("dropdownlist", undefined, historyFileText);
+    var groupLabelInput = w.add("group")
+        groupLabelInput.add("statictext", undefined, "Label Part 1: ")
+            var group = groupLabelInput.add ("group {alignChildren: 'left', orientation: ’stack'}");
+                labelList = group.add ("dropdownlist", undefined, historyFile1);
                 var printLabelText = group.add ("edittext");
-                    printLabelText.text = historyFileText[historyFileText.length-1];
-                    labelList.preferredSize.width = 340; labelList.preferredSize.height = 24;
+                    printLabelText.text = historyFile1[historyFile1.length-1];
                     printLabelText.preferredSize.width = 320; printLabelText.preferredSize.height = 24;
+                    labelList.preferredSize.width = 340; labelList.preferredSize.height = 24;
                     labelList.onChange = function () {
                         printLabelText.text = labelList.selection.text;
                         printLabelText.active = true;
                     }
-    var myEditGroup2 = w.add("group")
-        myEditGroup2.add("statictext", undefined, "Label Part 2: ")
-            var soup = myEditGroup2.add ("group {alignChildren: 'left', orientation: ’stack'}");
-                labelList2 = soup.add ("dropdownlist", undefined, historyFileText2);
+    var groupLabelInput2 = w.add("group")
+        groupLabelInput2.add("statictext", undefined, "Label Part 2: ")
+            var soup = groupLabelInput2.add ("group {alignChildren: 'left', orientation: ’stack'}");
+                labelList2 = soup.add ("dropdownlist", undefined, historyFile2);
                 var printLabelText2 = soup.add ("edittext");
-                    printLabelText2.text = historyFileText2[historyFileText2.length-1];
+                    printLabelText2.text = historyFile2[historyFile2.length-1];
                     labelList2.preferredSize.width = 340; labelList2.preferredSize.height = 24;
                     printLabelText2.preferredSize.width =  320; printLabelText2.preferredSize.height = 24;
                     labelList2.onChange = function () {
                         printLabelText2.text = labelList2.selection.text;
                         printLabelText2.active = true;
                     }
-    var myEditGroup3 = w.add("group")
-        myEditGroup3.add("statictext", undefined, "Label Part 3: ")
-            var loup = myEditGroup3.add ("group {alignChildren: 'left', orientation: ’stack'}");
-                labelList3 = loup.add ("dropdownlist", undefined, historyFileText3);
+    var groupLabelInput3 = w.add("group")
+        groupLabelInput3.add("statictext", undefined, "Label Part 3: ")
+            var loup = groupLabelInput3.add ("group {alignChildren: 'left', orientation: ’stack'}");
+                labelList3 = loup.add ("dropdownlist", undefined, historyFile3);
                 var printLabelText3 = loup.add ("edittext");
-                    printLabelText3.text = historyFileText3[historyFileText3.length-1];
+                    printLabelText3.text = historyFile3[historyFile3.length-1];
                     labelList3.preferredSize.width = 340; labelList3.preferredSize.height = 24;
                     printLabelText3.preferredSize.width =  320; printLabelText3.preferredSize.height = 24;
                     labelList3.onChange = function () {
@@ -192,13 +202,13 @@ function showWindow() {
                         printLabelText3.active = true;
                     }
 
-    var myInputGroupDestination = w.add("group");
+    var groupDestination = w.add("group");
   
-    myInputGroupDestination.add("statictext", undefined, "Destination: ")
-    var destinationPath = myInputGroupDestination.add("edittext", undefined, destinationHistory)
-    destinationPath.characters = 24;
-    destination = destinationPath.text
-    var destinationButton = myInputGroupDestination.add("button", undefined, "Browse")
+    groupDestination.add("statictext", undefined, "Destination: ")
+    var destinationPath = groupDestination.add("edittext", undefined, destinationHistory)
+        destinationPath.characters = 24;
+        destination = destinationPath.text
+    var destinationButton = groupDestination.add("button", undefined, "Browse")
     destinationButton.onClick = function() {
       var folderPath3 = Folder.selectDialog("Select the folder where you'd like your generated sheets to save")
       if (folderPath3) {
@@ -207,28 +217,40 @@ function showWindow() {
       }
     }
 
+    var autoWrapButton = w.add ("checkbox", undefined, "AutoPanel");
+    autoWrapButton.onClick = function() {
+      if (autoWrap == true) {
+        autoWrap = false
+      }
+      else {
+        autoWrap = true
+      }
+    }
+
     // BUTTON PANEL
-    var myButtonGroup = w.add("group")
+    var groupButtons = w.add("group")
 
     // SUBMIT BUTTON
-    var submitButton = myButtonGroup.add("button", undefined, "OK");
+    var submitButton = groupButtons.add("button", undefined, "OK");
         submitButton.alignment = "center";
         submitButton.onClick = function() {
             var label = printLabelText.text + " - " + printLabelText2.text + " - " + printLabelText3.text
-            var filename = printLabelText.text + "_" + printLabelText2.text + "_" + printLabelText3.text
+            var filename = printLabelText.text + " - " + printLabelText2.text + " - " + printLabelText3.text
             destination = destinationPath.text
-            PreparePrintFile(label, filename);
-            if (!arrayContains(historyFileText,printLabelText.text)) {
+            prepareToStart(label, filename);
+
+            // UPDATE HISTORY
+            if (!arrayContains(historyFile1,printLabelText.text)) {
                 var JFile = new File(historyPath + encodeURI("/labelList.txt"));
                 var content = printLabelText.text + ";\n";
                 writeFile(JFile, content);
             }
-            if (!arrayContains(historyFileText2,printLabelText2.text)) {
+            if (!arrayContains(historyFile2,printLabelText2.text)) {
                 var JFile = new File(historyPath + encodeURI("/labelList2.txt"));
                 var content = printLabelText2.text + ";\n";
                 writeFile(JFile, content);
             }
-            if (!arrayContains(historyFileText3,printLabelText3.text)) {
+            if (!arrayContains(historyFile3,printLabelText3.text)) {
                 var JFile = new File(historyPath + encodeURI("/labelList3.txt"));
                 var content = printLabelText3.text + ";\n";
                 writeFile(JFile, content);
@@ -236,20 +258,20 @@ function showWindow() {
             var destFile = new File(historyPath + encodeURI("/destinationHistory.txt"))
             var content = destinationPath.text
             writeFile(destFile,content, "w");
-        return w.close();
+
+        return w.close(); // CLOSE SCRIPT WINDOW WHEN FINISHED
         }
 
     // CANCEL BUTTON
-    var cancelButton = myButtonGroup.add("button", undefined, "Cancel");
+    var cancelButton = groupButtons.add("button", undefined, "Cancel");
     cancelButton.alignment = "center";
 
     // FOOTER IMAGE
     createFooter(w, scriptDeets.version)
-
     w.show();
-    return;
 }
 
+// WRITE TO .TXT FILES
 function writeFile(fileObj, fileContent, mode, encoding) {
     encoding = encoding || "utf-8";
     if (mode == null) {
@@ -266,12 +288,18 @@ function writeFile(fileObj, fileContent, mode, encoding) {
 }
 
 // SAVE AND CLOSE FILE
-function saveAndClose(doc, dest, name) {
-    fileNameSave = ("/" + name + '.pdf')
+function saveAndClose(doc, dest, name, panelInteger) {
+    if (autoWrap == true) {
+        fileNameSave = ("/" + name + " " + panelInteger + ".pdf")
+    }
+    else {
+        fileNameSave = ("/" + name + ".pdf")
+    }
     var saveName = new File(destination + fileNameSave);
     doc.saveAs(saveName, saveOpts);
     doc.close();
-  }
+    return;
+}
 
 // Execute Main Function
 showWindow();
