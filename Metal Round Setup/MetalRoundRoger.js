@@ -278,7 +278,8 @@ function createJigRemainder () {
 
   for (g = 0; g < remainderArray.length; g++) {
       var filePath = remainderArray[g].file
-      var thePDF = doc.groupItems.createFromFile(filePath);
+      var thePDF = doc.placedItems.add()
+      thePDF.file = File(filePath);
       thePDF.position = itemPositions[g];
       loopIndex = loopIndex + 1
       var sku2 = remainderArray[g].sku
@@ -335,7 +336,8 @@ function CreateJig(itemInformant) {
     var loopIndex = 0
 
     for (i = 0; i < remainingQty; i++) {
-      var thePDF = doc.groupItems.createFromFile(filePath);
+      var thePDF = doc.placedItems.add()
+      thePDF.file = File(filePath);
       thePDF.position = itemPositions[i];
       loopIndex++
       // Break the loop after 8 tiles

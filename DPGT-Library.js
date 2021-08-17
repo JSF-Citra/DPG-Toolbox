@@ -16,7 +16,19 @@ var dpgBlue = [0.098, 0.153, 0.317];
 var lightBlue = [0.376, 0.396, 0.49]
 var dpgWhite = [0.886, 0.894, 0.918];
 
+// PDF FILE SAVE OPTIONS
+var saveOpts = new PDFSaveOptions();
+saveOpts.compatibility = PDFCompatibility.ACROBAT7;
+saveOpts.generateThumbnails = false;
+saveOpts.preserveEditability = false;
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // FUNCTIONS
+
+// GET FOLDER THAT FILE IS IN
 function getFolderPath(filePath) {
     var fileFolderArray = []
     fileFolderArray = filePath.split("\\")
@@ -37,6 +49,31 @@ function getFolderPath(filePath) {
     return fileFolder
 }
 
+// ARRAY CONTAINS ORDER NUMBER (SPECIFICALLY FOR IMPOSITION WIZARD)
+function containsOrder(a, obj) {
+    for (var i = 0; i < a.length; i++) {
+        if (a[i].fields[0].field_0 == obj.fields[0].field_0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// ARRAY CONTAINS OBJECT
+function arrayContains(a, obj){
+    for (var i = 0; i < a.length; i++) {
+        if (a[i] == obj) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// CONVERT INCHES TO POINTS
+function points(inches) {
+    return inches * 72;
+  }
+
 // UI ELEMENTS
 function createFooter(w,version) {
     var footerGroup = w.add("group {alignChildren: 'left', orientation: ’stack'}")
@@ -48,28 +85,3 @@ function createFooter(w,version) {
     return footerGroup;
 }
 
-// PDF FILE SAVE OPTIONS
-var saveOpts = new PDFSaveOptions();
-saveOpts.compatibility = PDFCompatibility.ACROBAT7;
-saveOpts.generateThumbnails = false;
-saveOpts.preserveEditability = false;
-
-// ARRAY CONTAINS FUNCTION
-function containsOrder(a, obj) {
-    for (var i = 0; i < a.length; i++) {
-        if (a[i].fields[0].field_0 == obj.fields[0].field_0) {
-            return true;
-        }
-    }
-    return false;
-}
-
-// MORE GENERAL ARRAY INCLUDES FUNCTION
-function arrayContains(a, obj){
-    for (var i = 0; i < a.length; i++) {
-        if (a[i] == obj) {
-            return true;
-        }
-    }
-    return false;
-}

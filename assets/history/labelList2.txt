@@ -2,3 +2,5 @@ Main Stage Left;
 Main Stage Right;
 VIP Bar Left;
 VIP Bar Restroom;
+VIP Bar Back Wall;
+Restroom Side Wall;

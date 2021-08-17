@@ -1,7 +1,7 @@
 //@include "csvParser.js"
 //@include "../DPGT-Library.js"
 
-// TECHSTYLES IMPOSITION WIZARD V1.0
+// TECHSTYLES IMPOSITION WIZARD V1.5
 // Written by Dave Blois and John Sam Fuchs
 // Delta Print Group 2021
 // 
@@ -14,7 +14,7 @@
 // SCRIPT DETAILS
 var scriptDeets = {
   name : 'Imposition Wizard',
-  version : 'v1.31',
+  version : 'v1.5',
 }
 
 // INIT DIRECTORY AND ASSETS
@@ -40,6 +40,7 @@ var separateByRoll = false
 // STYLE VARIABLES
 var bgColor = dpgPlum
 
+// CREATE WINDOW
 function windowDisplay() {
   //Setting initial window variables
   var spacingOptions = [0, 0.0625, 0.125, 0.25, 0.5]
@@ -72,6 +73,11 @@ function windowDisplay() {
 
           // Get all CSV files
           var allCSV = source.getFiles(/\.csv$/i)
+          if (allCSV.length == 0) {
+            alert("No CSV files found!")
+          }
+          dataLines = []
+          displayTotalQuantity = 0
 
           for (i = 0; i < allCSV.length; i++) {
             var textLines = CSV.reader.read_in_txt(allCSV[i]);
@@ -97,16 +103,19 @@ function windowDisplay() {
   var myInputGroupInfo = inputPanel.add("group");
     myInputGroupInfo.alignment = "center";
 
+  // EXTRA STICKERS INPUT
   myInputGroupInfo.add("statictext", undefined, "Extra Stickers: ")
   var extraStickersText = myInputGroupInfo.add("edittext", undefined, "4")
     extraStickersText.characters = 2;
     extraPrints = extraStickersText.text
 
+  // SPACING INPUT
   myInputGroupInfo.add("statictext", undefined, "Spacing: ")
   var spacingSelection = myInputGroupInfo.add("dropdownlist", undefined, spacingOptions)
     spacingSelection.selection = 2;
     space = spacingSelection.selection
 
+  // MAX SHEET LENGTH INPUT
   myInputGroupInfo.add("statictext", undefined, "Max Sheet Length: ")
   var maxLengthText = myInputGroupInfo.add("edittext", undefined, "40")
     maxLengthText.characters = 2;
@@ -119,6 +128,7 @@ function windowDisplay() {
   
   var optionsGroup = inputPanel2.add ("group") //Make a group for options so they will lay side by side instead of vertically
 
+  // CUSTOM DESTINATION CHECK
   var customDestCheck = optionsGroup.add ("checkbox", undefined, "Custom Output Destination");
     customDestCheck.onClick = function() {
       if (myInputGroupDestination.enabled == true) {
@@ -130,6 +140,7 @@ function windowDisplay() {
         myInputGroupDestination.enabled = true;
       }
     }
+  // PROCESS BY ROLL CHECK
   var customRollCheck = optionsGroup.add ("checkbox", undefined, "Separate Into Rolls");
     customRollCheck.onClick = function() {
       if (separateByRoll == true) {
@@ -172,6 +183,21 @@ function windowDisplay() {
     totalQuantityText.characters = 24
   var submitButton = myButtonGroup.add("button", undefined, "Submit");
     submitButton.onClick = function() {
+
+      // Settings check
+      if (maxLengthText > 72) {
+        alert("Max sheet length too long! 72in or shorter.")
+        return
+      }
+      else if (maxLengthText < 6) {
+        alert("Max sheet length must be longer than 6 inches.")
+        return
+      }
+      if (displayTotalQuantity == 0) {
+        alert("Error: No orders to process!")
+        return
+      }
+
       if (customDestCheck.value == !true) {
         defaultDestination = source + "/Sheets";
         var f = new Folder(defaultDestination);
@@ -193,14 +219,132 @@ function windowDisplay() {
   return;
 }
 
-function saveAndClose(doc, dest) {
-  var saveName = new File(dest);
-  saveOpts = new PDFSaveOptions();
-  saveOpts.compatibility = PDFCompatibility.ACROBAT7;
-  saveOpts.generateThumbnails = false;
-  saveOpts.preserveEditability = false;
-  doc.saveAs(saveName, saveOpts);
-  doc.close();
+// LOOPER - EXECUTES THE MAIN FUNCTION FOR EVERY FILE IN THE FOLDER
+function FolderLooper(srcFolder, extraPrints, space) {
+
+  var allPrintPDFs = srcFolder.getFiles(/_2\.pdf$/i);
+  var allInfoPDFs = srcFolder.getFiles(/_1\.pdf$/i);
+
+  if (allPrintPDFs.length <= 0) {
+    alert("Error: No print files found!")
+    return
+  }
+  else if (allInfoPDFs.length <= 0) {
+    alert("Error: No infotech files found!")
+    return
+  }
+
+  // RUN THE INFOCUT FUNCTION ON ALL INFOTECH FILES
+  for (var i = 0; i < allInfoPDFs.length; i++) {
+    var itemSpecs = fileNameParser(allInfoPDFs[i]);
+    InfoCut(itemSpecs.Width, itemSpecs.Height, 0, itemSpecs.Height, allInfoPDFs[i], itemSpecs.Batch);
+  }
+
+  //OPEN AND PARSE ALL PRINT FILES
+  for (var i = 0; i < allPrintPDFs.length; i++) {
+    var itemSpecs = fileNameParser(allPrintPDFs[i]);
+    var printQuantity = itemSpecs.Quantity + parseInt(extraPrints);
+
+    var rows = Math.floor(maxDocHeight / (itemSpecs.Height + space))
+    var columns = Math.floor(canvasWidth / (itemSpecs.Width + space))
+
+    qtyPerSheet = (rows * columns)
+    if (qtyPerSheet >= printQuantity) {
+      qtyPerSheet = printQuantity
+    }
+    sheetsNeeded = Math.ceil(printQuantity / qtyPerSheet)
+    RemainingPrintQTY = printQuantity + sheetsNeeded //add sheets needed to compensate for infotech taking spot 1 on each sheet
+
+    newFile(printQuantity, itemSpecs.Width, itemSpecs.Height, space, canvasWidth, canvasHeight, allPrintPDFs[i], allInfoPDFs[i], destination, itemSpecs.Batch, columns, sheetsNeeded, qtyPerSheet, rows, itemSpecs.Order, itemSpecs.SKU)
+
+  }
+  return;
+}
+
+// PROCESS FILE NAME, GET PRODUCT DATA
+function fileNameParser(filename) {
+  var itemSpecs = {}
+  // try {
+
+    // FIND BATCH NUMBER IN FILE NAME
+    var BatchNumber = String(filename).match(/Batch%20\d{5}/)
+    var BatchNumber = String(BatchNumber).match(/(.{0,5})$/g)
+
+    // Get Order and SKU numbers from CSV
+    for (var i = 0; i < dataLines.length; i++) {
+      for (var j = 0; j < dataLines[i].fields.length; j++) {
+        var csvEntryData = dataLines[i].fields[j]
+        if (BatchNumber == csvEntryData.field_3.slice(0, -4)) {
+          itemSpecs.Order = csvEntryData.field_0;
+          itemSpecs.SKU = csvEntryData.field_1; 
+        }
+      }
+    }
+
+    // FIND WIDTH, HEIGHT, AND QUANTITY IN FILE NAME
+    var width = String(filename).match(/TS_(\d)/g)
+    var width = String(width).match(/(\d)/g)
+    var width = parseInt(width)
+    var height = String(filename).match(/TS_(\d)x(\d)/g)
+    var height = String(height).match(/x(\d)/g)
+    var height = String(height).match(/(\d)/g)
+    var height = parseInt(height)
+    var quantity = String(filename).match(/(qty-)(\d{1,5})/g)
+    var quantity = String(quantity).match(/(\d{1,5})/g)
+    var quantity = parseInt(quantity)
+
+    itemSpecs.Batch = BatchNumber;
+    itemSpecs.Width = width;
+    itemSpecs.Height = height;
+    itemSpecs.Quantity = quantity;
+
+    totalQuantity = quantity;
+
+    return itemSpecs;
+} 
+
+// PROCESS INFOTECH TICKETS
+function InfoCut(width, height, positionX, positionY, infoPath, batch) {
+  // Adds the batch number to a list for easy look up later
+  infoTechCache[batch] =  infoPath;
+  var infoPath = File(infoPath);
+  open(infoPath);
+  var width = points(width) - points(0.2)
+  var height = points(height) - points(0.2)
+  var positionX = points(positionX) + points(0.1)
+  var positionY = points(positionY) - points(0.1)
+
+  var accDoc = app.activeDocument;
+
+  // Remove spot color if already exists
+  for (i = 0; i < accDoc.spots.length; i++) {
+    if (app.activeDocument.spots[i].name == 'PerfCutContour' ) {
+      accDoc.spots[i].remove()
+    }
+  }
+  
+  // CREATE PERFCUTCONTOUR SPOT COLOR
+  var spotCMYK = new CMYKColor();
+    spotCMYK.cyan = 100;
+    spotCMYK.magenta = 0;
+    spotCMYK.yellow = 100;
+    spotCMYK.black = 0;
+  var PerfCutSpot = accDoc.spots.add();
+    PerfCutSpot.name = "PerfCutContour";
+    PerfCutSpot.colorType = ColorModel.SPOT;
+    PerfCutSpot.color = spotCMYK;
+  var PerfCutContour = new SpotColor();
+    PerfCutContour.spot = PerfCutSpot;
+
+  // DRAW CUT LINE
+  var newRect = accDoc.pathItems.rectangle(positionY, positionX, width, height)
+    newRect.stroked = true;
+    newRect.strokeWidth = 0.25;
+    newRect.strokeColor = PerfCutContour
+    newRect.fillColor = NoColor;
+
+  accDoc.close( SaveOptions.SAVECHANGES );
+  return infoTechCache;
 }
 
 // CREATE NEW FILE
@@ -304,134 +448,16 @@ function newFile(quantity, width, height, space, canvasWidth, canvasHeight, file
   }
 }
 
-// CONVERT INCHES TO POINTS
-function points(inches) {
-  return inches * 72;
+// SAVE AND CLOSE SHEET
+function saveAndClose(doc, dest) {
+  var saveName = new File(dest);
+  saveOpts = new PDFSaveOptions();
+  saveOpts.compatibility = PDFCompatibility.ACROBAT7;
+  saveOpts.generateThumbnails = false;
+  saveOpts.preserveEditability = false;
+  doc.saveAs(saveName, saveOpts);
+  doc.close();
 }
 
-
-function InfoCut(width, height, positionX, positionY, infoPath, batch) {
-  // Adds the batch number to a list for easy look up later
-  infoTechCache[batch] =  infoPath;
-  var infoPath = File(infoPath);
-  open(infoPath);
-  var width = points(width) - points(0.2)
-  var height = points(height) - points(0.2)
-  var positionX = points(positionX) + points(0.1)
-  var positionY = points(positionY) - points(0.1)
-
-  var accDoc = app.activeDocument;
-
-  // Remove spot color if already exists
-  for (i = 0; i < accDoc.spots.length; i++) {
-    if (app.activeDocument.spots[i].name == 'PerfCutContour' ) {
-      accDoc.spots[i].remove()
-    }
-  }
-  
-  // CREATE PERFCUTCONTOUR SPOT COLOR
-  var spotCMYK = new CMYKColor();
-    spotCMYK.cyan = 100;
-    spotCMYK.magenta = 0;
-    spotCMYK.yellow = 100;
-    spotCMYK.black = 0;
-  var PerfCutSpot = accDoc.spots.add();
-    PerfCutSpot.name = "PerfCutContour";
-    PerfCutSpot.colorType = ColorModel.SPOT;
-    PerfCutSpot.color = spotCMYK;
-  var PerfCutContour = new SpotColor();
-    PerfCutContour.spot = PerfCutSpot;
-
-  // DRAW CUT LINE
-  var newRect = accDoc.pathItems.rectangle(positionY, positionX, width, height)
-    newRect.stroked = true;
-    newRect.strokeWidth = 0.25;
-    newRect.strokeColor = PerfCutContour
-    newRect.fillColor = NoColor;
-
-  accDoc.close( SaveOptions.SAVECHANGES );
-  return infoTechCache;
-}
-
-function fileNameParser(filename) {
-  var itemSpecs = {}
-  // try {
-
-    // FIND BATCH NUMBER IN FILE NAME
-    var BatchNumber = String(filename).match(/Batch%20\d{5}/)
-    var BatchNumber = String(BatchNumber).match(/(.{0,5})$/g)
-
-    // Get Order and SKU numbers from CSV
-    for (var i = 0; i < dataLines.length; i++) {
-      for (var j = 0; j < dataLines[i].fields.length; j++) {
-        var csvEntryData = dataLines[i].fields[j]
-        if (BatchNumber == csvEntryData.field_3.slice(0, -4)) {
-          itemSpecs.Order = csvEntryData.field_0;
-          itemSpecs.SKU = csvEntryData.field_1; 
-        }
-      }
-    }
-
-    // FIND WIDTH, HEIGHT, AND QUANTITY IN FILE NAME
-    var width = String(filename).match(/TS_(\d)/g)
-    var width = String(width).match(/(\d)/g)
-    var width = parseInt(width)
-    var height = String(filename).match(/TS_(\d)x(\d)/g)
-    var height = String(height).match(/x(\d)/g)
-    var height = String(height).match(/(\d)/g)
-    var height = parseInt(height)
-    var quantity = String(filename).match(/(qty-)(\d{1,5})/g)
-    var quantity = String(quantity).match(/(\d{1,5})/g)
-    var quantity = parseInt(quantity)
-
-    itemSpecs.Batch = BatchNumber;
-    itemSpecs.Width = width;
-    itemSpecs.Height = height;
-    itemSpecs.Quantity = quantity;
-
-    totalQuantity = quantity;
-
-    return itemSpecs;
-  } 
-    // catch (e) {
-    //   alert(filename + " Shows invalid file name")
-    // } 
-    // finally {}
-
-// }
-
-
-// LOOPER - EXECUTES THE MAIN FUNCTION FOR EVERY FILE IN THE FOLDER
-function FolderLooper(srcFolder, extraPrints, space) {
-
-  var allPrintPDFs = srcFolder.getFiles(/_2\.pdf$/i);
-  var allInfoPDFs = srcFolder.getFiles(/_1\.pdf$/i);
-
-  // RUN THE INFOCUT FUNCTION ON ALL INFOTECH FILES
-  for (var i = 0; i < allInfoPDFs.length; i++) {
-    var itemSpecs = fileNameParser(allInfoPDFs[i]);
-    InfoCut(itemSpecs.Width, itemSpecs.Height, 0, itemSpecs.Height, allInfoPDFs[i], itemSpecs.Batch);
-  }
-
-  //OPEN AND PARSE ALL PRINT FILES
-  for (var i = 0; i < allPrintPDFs.length; i++) {
-    var itemSpecs = fileNameParser(allPrintPDFs[i]);
-    var printQuantity = itemSpecs.Quantity + parseInt(extraPrints);
-
-    var rows = Math.floor(maxDocHeight / (itemSpecs.Height + space))
-    var columns = Math.floor(canvasWidth / (itemSpecs.Width + space))
-
-    qtyPerSheet = (rows * columns)
-    if (qtyPerSheet >= printQuantity) {
-      qtyPerSheet = printQuantity
-    }
-    sheetsNeeded = Math.ceil(printQuantity / qtyPerSheet)
-    RemainingPrintQTY = printQuantity + sheetsNeeded //add sheets needed to compensate for infotech taking spot 1 on each sheet
-
-    newFile(printQuantity, itemSpecs.Width, itemSpecs.Height, space, canvasWidth, canvasHeight, allPrintPDFs[i], allInfoPDFs[i], destination, itemSpecs.Batch, columns, sheetsNeeded, qtyPerSheet, rows, itemSpecs.Order, itemSpecs.SKU)
-
-  }
-  return;
-}
-
+// BEGIN EXECUTION
 windowDisplay();
