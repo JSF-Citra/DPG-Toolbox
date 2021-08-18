@@ -188,17 +188,24 @@ function prepareToStart(label, filename) {
                 }
             }
         }
-        // No PerfCutContour failsafe
+
+        // ##### ERROR REPORTING #####
         if (panelPaths.length<1) {
             alert("No PerfCutContour paths found.")
             return
         }
+        // ##### END ERROR REPORTING #####
+
         for (j = 0; j < panelPaths.length; j++) {
             app.executeMenuCommand("deselectall");
+
+            // ##### ERROR REPORTING #####
             if (app.activeDocument.layers.length<2) {
                 alert("Only one layer found. Move cut lines to top layer, artwork to bottom layer.")
                 return
             }
+            // ##### END ERROR REPORTING #####
+
             else {
                 app.activeDocument.activeLayer = app.activeDocument.layers[app.activeDocument.layers.length-1];
                 app.activeDocument.activeLayer.hasSelectedArtwork = true;

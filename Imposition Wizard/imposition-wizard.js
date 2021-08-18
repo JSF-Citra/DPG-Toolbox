@@ -73,9 +73,13 @@ function windowDisplay() {
 
           // Get all CSV files
           var allCSV = source.getFiles(/\.csv$/i)
+          
+          // ##### ERROR REPORTING #####
           if (allCSV.length == 0) {
             alert("No CSV files found!")
           }
+          // ##### END ERROR REPORTING #####
+
           dataLines = []
           displayTotalQuantity = 0
 
@@ -184,7 +188,7 @@ function windowDisplay() {
   var submitButton = myButtonGroup.add("button", undefined, "Submit");
     submitButton.onClick = function() {
 
-      // Settings check
+      // ##### ERROR REPORTING ##### //
       if (maxLengthText > 72) {
         alert("Max sheet length too long! 72in or shorter.")
         return
@@ -197,6 +201,7 @@ function windowDisplay() {
         alert("Error: No orders to process!")
         return
       }
+      // ##### END ERROR REPORTING ##### //
 
       if (customDestCheck.value == !true) {
         defaultDestination = source + "/Sheets";
@@ -225,6 +230,7 @@ function FolderLooper(srcFolder, extraPrints, space) {
   var allPrintPDFs = srcFolder.getFiles(/_2\.pdf$/i);
   var allInfoPDFs = srcFolder.getFiles(/_1\.pdf$/i);
 
+  // ##### ERROR REPORTING ##### //
   if (allPrintPDFs.length <= 0) {
     alert("Error: No print files found!")
     return
@@ -233,6 +239,7 @@ function FolderLooper(srcFolder, extraPrints, space) {
     alert("Error: No infotech files found!")
     return
   }
+  // ##### END ERROR REPORTING ##### //
 
   // RUN THE INFOCUT FUNCTION ON ALL INFOTECH FILES
   for (var i = 0; i < allInfoPDFs.length; i++) {

@@ -9,6 +9,9 @@
 // 2. Creates a rectangle the same size as the artboard
 // 3. Expands artboard 0.25" in all directions
 
+// Script deets
+var scriptDeets = {}
+
 // Init variables
 var doc = app.activeDocument;
 var height = doc.height

@@ -69,6 +69,17 @@ var itemPositions = [
   [715, 114],
   [1039, 114],
 ]
+
+// var itemPositions = [
+//   [72, 433],
+//   [396, 433],
+//   [720, 433],
+//   [1044, 433],
+//   [72,109],
+//   [396, 109],
+//   [720, 109],
+//   [1044, 109],
+// ]
 // END INIT VARIABLES
 /////////////////////
 
@@ -149,6 +160,8 @@ function windowDisplay() {
     var myButtonGroup1 = masterGroup.add("group");
     var addToListButton = myButtonGroup1.add("button", undefined, "Add to Queue", {name: "ok"});
       addToListButton.onClick = function() {
+
+        // ##### ERROR CATCHING #####
         if (filePath == null) {
           alert("No print file selected!")
           return
@@ -169,6 +182,8 @@ function windowDisplay() {
           alert("Quantity must be 1 or higher!")
           return
         }
+        // ##### END ERROR CATCHING #####
+
         itemInfo = {
           order: orderNumberText.text,
           sku: skuNumberText.text, 
