@@ -56,8 +56,8 @@ function windowDisplay() {
   // INITIALIZE PANEL
   var inputPanel = w.add('panel');
     inputPanel.graphics.backgroundColor = w.graphics.newBrush (w.graphics.BrushType.SOLID_COLOR,[.35, .35, .35]);
-  
-    //Adding the Source Folder Path Input
+
+  //Adding the Source Folder Path Input
   var myInputGroupSource = inputPanel.add("group");
     myInputGroupSource.alignment = "center";
     myInputGroupSource.add("statictext", undefined, "Source: ")
@@ -67,6 +67,7 @@ function windowDisplay() {
     var sourceButton = myInputGroupSource.add("button", undefined, "Browse")
       sourceButton.onClick = function() {
         var folderPath3 = Folder.selectDialog("Select the folder where you'd like to pull files from")
+        // var folderPath3 = new CommonOpenFileDialog( { IsFolderPicker = true })
         if (folderPath3) {
           sourcePath.text = decodeURI(folderPath3.fsName);
           source = Folder(sourcePath.text);
@@ -316,12 +317,12 @@ function InfoCut(width, height, positionX, positionY, infoPath, batch) {
   infoTechCache[batch] =  infoPath;
   var infoPath = File(infoPath);
   open(infoPath);
+  var accDoc = app.activeDocument;
+
   var width = points(width) - points(0.2)
   var height = points(height) - points(0.2)
   var positionX = points(positionX) + points(0.1)
-  var positionY = points(positionY) - points(0.1)
-
-  var accDoc = app.activeDocument;
+  var positionY = accDoc.artboards[0].artboardRect[1] - points(0.1)
 
   // Remove spot color if already exists
   for (i = 0; i < accDoc.spots.length; i++) {

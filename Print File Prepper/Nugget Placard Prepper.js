@@ -55,7 +55,6 @@ function PreparePrintFile() {
         blackSwatch.black = 100;
 
 
-
 // 2. DELETE UNNECCESSARY OBJECTS, CHANGE COLORS
 
     // Delete all invisible objects (clipping masks)
