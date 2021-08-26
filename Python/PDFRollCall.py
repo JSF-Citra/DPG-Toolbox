@@ -43,10 +43,11 @@ directory = StringVar()
 
 # frame
 frame = Frame(root, relief = 'flat',
-              bd = 1, bg = '#6A3D58')
+    bd = 1, bg = '#6A3D58')
 frame.pack(fill = 'both', expand = True,
-           ipadx = 10, ipady = 4)
+    ipadx = 10, ipady = 4)
 # font
+
 myFont = font.Font(family='Roboto', size = 12)
 
 
@@ -91,8 +92,10 @@ def folderPath():
     global dirSel
     dirSel = root.foldername
     estimate = 0
+    PdfFound = False
     for file in os.listdir(dirSel):
         if file.endswith('.pdf'):
+            PdfFound = True
             f = open(dirSel + '/' + file, 'rb')
             pdf = PdfFileReader(f)
             mediaBox = pdf.getPage(0).mediaBox
@@ -100,7 +103,8 @@ def folderPath():
             f.close()
             estimateText.set('Rolls Required: ' + str(round((estimate / maxRollLength),2)) + ' - Total Length: ' + str(round(estimate,2)))
         else: estimateText.set('No PDFs found in directory.')
-            
+    if PdfFound == True:
+        submitButton.state = NORMAL
             
 def submitter():
     fileCheck(dirSel)
@@ -109,8 +113,8 @@ infoLabel = Label(frame, text="Select a folder containing print files you'd like
 infoLabel2 = Label(frame, text="After selecting the folder, click Submit.", font=myFont)
 infoLabel.configure(fg='#FFFFFF', bg='#6A3D58')
 infoLabel2.configure(fg='#FFFFFF', bg='#6A3D58')
-uploader = Button(frame, text="Select Folder",  fg='black', bg='white', command=folderPath, font=myFont, width=30)
-submitButton = Button(frame, text="Submit", command=submitter, fg='white', bg='#6a3d58', font=myFont, width=30)
+uploader = Button(frame, text="Select Folder",  fg='black', bg='white', command=folderPath, font=myFont, width=40, height=2)
+submitButton = Button(frame, text="Submit", command=submitter, fg='white', bg='#6a3d58', font=myFont, width=40, height=2, state=DISABLED)
 locationLabel = Label(frame, textvariable=directory, font=myFont)
 estimateLabel = Label(frame, textvariable=estimateText, font=myFont)
 estimateLabel.configure(fg='#FFFFFF', bg='#6A3D58')
