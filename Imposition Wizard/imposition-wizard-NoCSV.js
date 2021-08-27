@@ -77,9 +77,9 @@ function windowDisplay() {
           var allCSV = source.getFiles(/\.csv$/i)
           
           // ##### ERROR REPORTING #####
-          if (allCSV.length == 0) {
-            alert("No CSV files found!")
-          }
+          // if (allCSV.length == 0) {
+          //   alert("No CSV files found!")
+          // }
           // ##### END ERROR REPORTING #####
 
           dataLines = []
@@ -199,10 +199,10 @@ function windowDisplay() {
         alert("Max sheet length must be longer than 6 inches.")
         return
       }
-      if (displayTotalQuantity == 0) {
-        alert("Error: No orders to process!")
-        return
-      }
+      // if (displayTotalQuantity == 0) {
+      //   alert("Error: No orders to process!")
+      //   return
+      // }
       // ##### END ERROR REPORTING ##### //
 
       if (customDestCheck.value == !true) {
@@ -278,15 +278,17 @@ function fileNameParser(filename) {
     filename = String(filename).split('/')
     filename = filename[filename.length-1]
     var orderNumber = String(filename).slice(0,5)
-    var skuNumber = String(filename).slice(6,11)
+    var skuNumber = String(filename).slice(6)
+    skuNumber = skuNumber.split('_')[0]
     var size = String(filename).match(/_(\d)x(\d)_/g)
     var width = size[0].slice(1,2)
     var height = size[0].slice(3,4)
     var quantityfile = String(filename).split('_qty%20')[1]
     quantityfile = quantityfile.split('_')[0]
 
-    if (skuNumber == 21896 & String(filename).slice(filename.length-6,filename.length) == 'NT.pdf') {
-      skuNumber = 218967 + '-CP' + cpIndex;
+    // CHARLES PRODUCTS FAILSAFE
+    if (skuNumber == 218967 & String(filename).slice(filename.length-6,filename.length) == 'NT.pdf') {
+      skuNumber = skuNumber + '-CP' + cpIndex;
       cpIndex = cpIndex + 1
     }
     
@@ -296,53 +298,7 @@ function fileNameParser(filename) {
     itemSpecs.Height = height;
     itemSpecs.Quantity = quantityfile;
 
-    
-    // // FIND BATCH NUMBER IN FILE NAME
-    // var BatchNumber = String(filename).match(/Batch%20\d{5}/)
-    // var BatchNumber = String(BatchNumber).match(/(.{0,5})$/g)
-
-    // // Get Order and SKU numbers from CSV
-    // for (var i = 0; i < dataLines.length; i++) {
-    //   for (var j = 0; j < dataLines[i].fields.length; j++) {
-    //     var csvEntryData = dataLines[i].fields[j]
-    //     if (skuNumber == 21896) {
-    //       if (orderNumber == csvEntryData.field_0 & (skuNumber == 21896)) {
-    //         itemSpecs.Order = csvEntryData.field_0;
-    //         itemSpecs.SKU = 'Charles-' + Math.floor(Math.random() * 250);
-    //         itemSpecs.Width = csvEntryData.field_2.slice(0, -12);
-    //         itemSpecs.Height = csvEntryData.field_2.slice(4, -8);
-    //         itemSpecs.Quantity = csvEntryData.field_6;
-    //       }
-    //     }
-    //     else {
-    //       if (orderNumber == csvEntryData.field_0 & (skuNumber == csvEntryData.field_1)) {
-    //         itemSpecs.Order = csvEntryData.field_0;
-    //         itemSpecs.SKU = csvEntryData.field_1; 
-    //         itemSpecs.Width = csvEntryData.field_2.slice(0, -12);
-    //         itemSpecs.Height = csvEntryData.field_2.slice(4, -8);
-    //         itemSpecs.Quantity = csvEntryData.field_6;
-    //       }
-    //     }
-    //   }
-    // }
-
     quantity = itemSpecs.Quantity
-    // // FIND WIDTH, HEIGHT, AND QUANTITY IN FILE NAME
-    // var width = String(filename).match(/TS_(\d)/g)
-    // var width = String(width).match(/(\d)/g)
-    // var width = parseInt(width)
-    // var height = String(filename).match(/TS_(\d)x(\d)/g)
-    // var height = String(height).match(/x(\d)/g)
-    // var height = String(height).match(/(\d)/g)
-    // var height = parseInt(height)
-    // var quantity = String(filename).match(/(qty%20)(\d{1,5})/g)
-    // var quantity = String(quantity).match(/(\d{1,5})/g)
-    // var quantity = parseInt(quantity)
-
-    // itemSpecs.Batch = BatchNumber;
-    // itemSpecs.Width = width;
-    // itemSpecs.Height = height;
-    // itemSpecs.Quantity = quantity;
 
     totalQuantity = quantity;
 
@@ -389,7 +345,7 @@ function InfoCut(width, height, positionX, positionY, infoPath, batch) {
     newRect.strokeColor = PerfCutContour
     newRect.fillColor = NoColor;
 
-  accDoc.close( SaveOptions.SAVECHANGES );
+  accDoc.close(SaveOptions.SAVECHANGES );
   return infoTechCache;
 }
 
